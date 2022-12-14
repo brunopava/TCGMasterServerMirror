@@ -1,0 +1,3 @@
+[submodule "toolz"]
+	path = toolz
+	url = https://github.com/brunopava/toolz.git

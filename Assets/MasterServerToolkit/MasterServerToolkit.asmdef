@@ -1,0 +1,21 @@
+{
+    "name": "MasterServerToolkit",
+    "rootNamespace": "",
+    "references": [
+        "Unity.TextMeshPro",
+        "SimpleWebTransport",
+        "Mirror",
+        "FishNet.Runtime",
+        "FishNet.Generated",
+        "FishNet.Example"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
