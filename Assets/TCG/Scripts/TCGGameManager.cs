@@ -82,7 +82,7 @@ public class TCGGameManager : NetworkBehaviour
 
             for (int i = 0; i < TCGConstants.MAX_CARDS_PER_DECK; i++)
             {
-                GameObject card = Instantiate(cardPrefab, new Vector2(-8000, 0.1f), Quaternion.identity);
+                GameObject card = Instantiate(cardPrefab, new Vector3(-8000, 0.1f, 0), Quaternion.identity);
                 CardBehaviour cardBehaviour = card.GetComponent<CardBehaviour>();
                 
                 decksByPlayer[currentPlayer].Add(cardBehaviour);
@@ -141,6 +141,8 @@ public class TCGGameManager : NetworkBehaviour
                 }
             }
         }
+
+        UIManager.Instance.OnGameStarted();
 
         CMDDrawInitialCards(NetworkClient.localPlayer.netId);
     }
