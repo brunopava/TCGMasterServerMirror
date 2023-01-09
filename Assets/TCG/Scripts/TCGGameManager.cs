@@ -195,6 +195,7 @@ public class TCGGameManager : NetworkBehaviour
             if (card.hasAuthority)
             {
                 card.transform.SetParent(TCGArena.Instance.playerHand);
+                card.display.ToggleSleeve(false);
                 card.isInteractable = true;
             }
             else
@@ -276,6 +277,18 @@ public class TCGGameManager : NetworkBehaviour
                 break;
             }
         }
+
+        #if UNITY_EDITOR 
+            //TODO: This is bad code for release and future testing.
+            //Remove after multiple player mechanics phase
+            if(temporaryTurnCounter.Count == connectedPlayers.Count)
+            {
+                temporaryTurnCounter = new List<uint>();
+                currentTurn++;
+            }
+            string label = "Player: {0} Turn: {1}";
+            UIManager.Instance.debugTurn.text = string.Format(label, playerTurn.ToString(), currentTurn.ToString());
+        #endif
 
         DelayedTurnPass();
     }

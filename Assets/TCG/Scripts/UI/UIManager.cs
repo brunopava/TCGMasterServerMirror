@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Mirror;
+using TMPro;
 
 public class UIManager : Singleton<UIManager>
 {
@@ -12,8 +13,11 @@ public class UIManager : Singleton<UIManager>
 
     public Button endTurnButton;
 
+    public TextMeshProUGUI debugTurn;
+
     public void OnGameStarted()
     {
+        endTurnButton.onClick.RemoveAllListeners();
         endTurnButton.onClick.AddListener(
             ()=>{
                 TCGGameManager.Instance.CMDEndTurn(NetworkClient.localPlayer.netId);

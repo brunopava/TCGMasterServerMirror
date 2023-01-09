@@ -4,13 +4,17 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 
-public class CardBehaviour : CardBase, IPointerEnterHandler, IPointerExitHandler, IDragHandler, IBeginDragHandler, IEndDragHandler, IPointerDownHandler, IPointerUpHandler
+public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerExitHandler, IDragHandler, IBeginDragHandler, IEndDragHandler, IPointerDownHandler, IPointerUpHandler
 {
+    public CardDisplay display;
+
     private bool _isDragging = false;
     private Transform _dropArea;
 
     public bool isDraggable = true;
     public bool isInteractable = false;
+    public bool isOnField = false;
+    public bool isAttackEnabled = false;
 
     //Detect if the Cursor starts to pass over the GameObject
     public void OnPointerEnter(PointerEventData pointerEventData)
@@ -64,13 +68,21 @@ public class CardBehaviour : CardBase, IPointerEnterHandler, IPointerExitHandler
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        if (!isInteractable || !isDraggable)
+        if (!isInteractable)
         {
             return;
         }
 
+        if(!isDraggable && isAttackEnabled && isOnField)
+        {
+            TargetSystem.Instance.isAttack = true;
+            TargetSystem.Instance.isOponentOnly = true;
+            TargetSystem.Instance.BeginTargeting(this, AttackComplete);
+            return;
+        }
+
         _isDragging = true;
-        transform.SetParent(null);
+        transform.SetParent(null); 
     }
 
     public void OnEndDrag(PointerEventData eventData)
@@ -100,9 +112,16 @@ public class CardBehaviour : CardBase, IPointerEnterHandler, IPointerExitHandler
         }
     }
 
+    private void AttackComplete(ITarget source, List<ITarget> targets)
+    {
+
+    }
+
     public void Cast()
     {
         isDraggable = false;
+        isOnField = true;
+        isAttackEnabled = true;
         transform.SetParent(TCGArena.Instance.playerField);
     }
 
