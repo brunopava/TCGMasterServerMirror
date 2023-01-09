@@ -37,6 +37,12 @@ public class HandDisplay : MonoBehaviour
                     child.position.y,
                     pixel.z
                 );
+
+                float endPosX = child.position.x - transform.position.x;
+                float endPosY = child.position.z - transform.position.z;
+
+                float angle = Mathf.Atan2(endPosX, endPosY) * Mathf.Rad2Deg;
+                child.rotation = Quaternion.Euler(new Vector3(0, angle, 0));
             }     
         }
     }
