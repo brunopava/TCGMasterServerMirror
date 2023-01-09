@@ -10,6 +10,8 @@ public delegate void PlayerAction(int actionID);
 
 public class ActionChain : NetworkBehaviour
 {
+    public static ActionChain Instance;
+    
     public int actionCounter = 0;
 
     [SerializeField]
@@ -27,6 +29,9 @@ public class ActionChain : NetworkBehaviour
 
     private void Awake()
     {
+        if(Instance == null)
+            Instance = this;
+
         GameObject inactivity = new GameObject("[Timer] - Inactivity (pass turn)");
         inactivityTimer = inactivity.AddComponent<GameTimer>();
 

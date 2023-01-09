@@ -11,18 +11,23 @@ public class EffectBase
 {
     public int id;
     public string effect_name;
+    public string description_label;
 
+    //Stats Modifiers
     public int damage;
     public int heal;
     public int target_number;    
     public int plus_marker; 
-    public int minus_marker;    
+    public int minus_marker;
+
     public int draw_cards;  
     public int self_discard_cards;  
-    public int oponent_discard_cards;   
+    public int oponent_discard_cards;
+
     public int create_tokens;   
-    public int token_skin;   
-    public int turn_counter;    
+    public int token_skin;
+
+    public int turn_counter;
     public int increase_costs;  
     public int decrease_costs;  
     public int increase_resources; 
@@ -51,7 +56,8 @@ public class EffectBase
     public bool is_aura; 
     public int aura_priority; 
     public bool is_aura_friendly;   
-    public bool is_aura_enemy;   
+    public bool is_aura_enemy;
+    
     public bool destroy_target;
     public bool return_target_to_hand;  
     public bool search_in_deck;
@@ -84,14 +90,13 @@ public class EffectBase
     public virtual void OnDiscard(ITarget source, OnEffectApplied onEffectApplied = null, OnCancelCast onCancel = null) { }
     public virtual void OnDraw(ITarget source, OnEffectApplied onEffectApplied = null, OnCancelCast onCancel = null) { }
     public virtual void OnSummon(ITarget source, OnEffectApplied onEffectApplied = null, OnCancelCast onCancel = null) { }
-
-    //todo:
     public virtual void OnDamage(ITarget source, OnEffectApplied onEffectApplied = null, OnCancelCast onCancel = null) { }
     public virtual void OnHeal(ITarget source, OnEffectApplied onEffectApplied = null, OnCancelCast onCancel = null) { }
 
     public void SetEffect(Effect _effect)
     {
         effect_name = _effect.effect_name;
+        effect_name = _effect.description_label;
 
         int.TryParse(_effect.id, out id);
         int.TryParse(_effect.damage, out damage);
@@ -275,6 +280,7 @@ public class Effect
 {
     public string id {get;set;}
     public string effect_name {get;set;}
+    public string description_label {get;set;}
     public string damage {get;set;}
     public string heal {get;set;}
     public string target_number {get;set;}    

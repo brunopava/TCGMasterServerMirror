@@ -31,7 +31,7 @@ public class TCGGameManager : NetworkBehaviour
     [SyncVar]
     public uint defeatedPlayer;
 
-    private TCGServer gameServer;
+    public TCGServer gameServer;
     private TCGClient gameClient;
 
     private void Awake()
@@ -41,12 +41,6 @@ public class TCGGameManager : NetworkBehaviour
 
         gameServer = GetComponent<TCGServer>();
         gameClient = GetComponent<TCGClient>();
-    }
-
-    public void OnStartServer()
-    {
-        Debug.Log("ON START SERVER");
-        Debug.Log(isLocalPlayer);
     }
 
     #region COMMANDS

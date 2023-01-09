@@ -7,163 +7,40 @@ using System.Threading.Tasks;
 using DG.Tweening;
 using System.Linq;
 
-[System.Serializable]
-public class Token {
-    public int damage;
-    public int hit_points;
-    public int effect_id;
-}
+// [System.Serializable]
+// public class Token {
+//     public int damage;
+//     public int hit_points;
+//     public int effect_id;
+// }
 
 public class EffectResolver : NetworkBehaviour
 {
-    // [Command(requiresAuthority = false)]
-    // public void CMDSummonToken(uint playerID, int effect_id, string jsonToken)
-    // {
-    //     CardGameManager.Instance.actionChain.AddToChain(
-    //         "CMDSummonToken",
-    //         (int actionID)=>{
-    //             List<Token> token = JsonConvert.DeserializeObject<List<Token>>(jsonToken);
-    //             List<uint> cards = new List<uint>();
+    private EffectServer serverEffect;
+    private EffectClient clientEffect;
 
-    //             NetworkIdentity player = NetworkServer.spawned[playerID];
-    //             CardEffectBase effect = EffectFactory.Instance.allEffects[effect_id];
+    public static EffectResolver Instance;
 
-    //             int num_tokens = effect.create_tokens;
-    //             int slotsLeft = Constants.MAX_CARDS_PER_FIELD - CardGameManager.Instance.fieldByPlayer[playerID].Count;
-    //             int token_count = 0;
-                
-    //             if(num_tokens > 0 && slotsLeft >= num_tokens)
-    //             {
-    //                 token_count = num_tokens;
-    //             }else if (num_tokens > 0 && slotsLeft < num_tokens)
-    //             {
-    //                 token_count = slotsLeft;
-    //             }
+    private void Awake()
+    {
+        if(Instance == null)
+            Instance = this;
 
-    //             for (int i = 0; i < token_count; i ++)
-    //             {
-    //                 //criar o objeto CardBehaviour com a info da token
-    //                 GameObject card = Instantiate(CardGameManager.Instance.cardPrefab, new Vector2(0, 0), Quaternion.identity);
-    //                 CardBehaviour cardBehaviour = card.GetComponent<CardBehaviour>();
+        serverEffect = GetComponent<EffectServer>();
+        clientEffect = GetComponent<EffectClient>();
+    }
 
-    //                 cardBehaviour.ownerID = playerID;
+    [Command(requiresAuthority = false)]
+    public void CMDSummonToken(uint playerID, int effect_id, string jsonToken)
+    {
+       serverEffect.SummonToken(playerID,effect_id,jsonToken);
+    }
 
-    //                 NetworkServer.Spawn(card, player.connectionToClient);
-
-    //                 cardBehaviour.InitializeToken(token[0]);
-
-    //                 if(CardGameManager.Instance.cardsPlayedByPlayerAndTurn[playerID].ContainsKey(CardGameManager.Instance.currentTurn))
-    //                 {
-    //                     CardGameManager.Instance.cardsPlayedByPlayerAndTurn[playerID][CardGameManager.Instance.currentTurn].Add(cardBehaviour.netId);
-    //                 }else{
-    //                     Debug.LogError("FIODEL");
-    //                 }
-
-    //                 CardGameManager.Instance.fieldByPlayer[playerID].Add(cardBehaviour);
-                    
-    //                 cardBehaviour.isOnField = true;
-    //                 cardBehaviour.is_creature = true;
-    //                 cardBehaviour.isAttackEnabled = false;
-    //                 cardBehaviour.isToken = true;
-
-    //                 cards.Add(cardBehaviour.netId);
-    //             }
-
-    //             string jsonEffect = JsonConvert.SerializeObject(effect);
-    //             string jsonCards = JsonConvert.SerializeObject(cards);
-
-    //             // Debug.Log(jsonCards);
-    //             // Debug.Log(jsonEffect);
-
-    //             SetBuffs(playerID, jsonCards, jsonEffect);
-
-    //             DelayedSummonToken(playerID, jsonToken, jsonCards, actionID);
-    //         }
-    //     );
-    //     if(!CardGameManager.Instance.actionChain.isChainBusy)
-    //     {
-    //         CardGameManager.Instance.actionChain.ResolveChain();
-    //     }
-    // }
-
-    // private async void DelayedSummonToken(uint playerID, string jsonToken, string jsonCards, int actionID)
-    // {
-    //     await new WaitForSeconds(0.5f);
-    //     RPCSummonToken(playerID, jsonToken, jsonCards, actionID);
-    // }
-
-    // [ClientRpc]
-    // private void RPCSummonToken(uint playerID, string jsonToken, string jsonCards, int actionID)
-    // {
-    //     List<uint> cards = JsonConvert.DeserializeObject<List<uint>>(jsonCards);
-    //     List<Token> token = JsonConvert.DeserializeObject<List<Token>>(jsonToken);
-
-    //     for (int i = 0; i < cards.Count; i++)
-    //     {
-    //         NetworkIdentity netiden = NetworkClient.spawned[cards[i]];
-    //         CardBehaviour card = netiden.GetComponent<CardBehaviour>();
-
-    //         if (card.hasAuthority)
-    //         {
-    //             card.transform.SetParent(UIGameArena.Instance.playerField);
-    //             card.SetCardInfo();
-    //             card.isInteractable = true;
-    //             card.isDraggable = false;
-
-    //             foreach(int effect_id in card.card_effects)
-    //             {
-    //                 if (EffectFactory.Instance.allEffects.ContainsKey(effect_id))
-    //                 {
-    //                     CardEffectBase effect = EffectFactory.Instance.allEffects[effect_id];
-
-    //                     if (effect.on_cast_effect)
-    //                     {
-    //                         effect.OnCast(
-    //                             card,
-    //                             () =>
-    //                             {
-    //                                 Debug.Log("Casted: " + effect.effect_name);
-    //                             }
-    //                         );
-    //                     }
-    //                 }
-    //             }
-
-    //             for(int j = 0; j<UIGameArena.Instance.playerField.childCount; j++)
-    //             {
-    //                 CardBehaviour current  = UIGameArena.Instance.playerField.GetChild(j).GetComponent<CardBehaviour>();
-
-    //                 foreach(int effect_id in current.card_effects)
-    //                 {
-    //                     if(EffectFactory.Instance.allEffects.ContainsKey(effect_id) && current.netId != card.netId)
-    //                     {
-    //                         CardEffectBase effect = EffectFactory.Instance.allEffects[effect_id];
-                            
-    //                         if(effect.is_aura && effect is AuraPlusEffect)
-    //                         {
-    //                             AuraPlusEffect auraEffect = (effect as AuraPlusEffect);
-    //                             List<ITarget> targets = new List<ITarget>();
-    //                             targets.Add(card);
-    //                             auraEffect.OnLateSummon(targets, 
-    //                                 ()=>{
-    //                                     Debug.Log("Casted: " + auraEffect.effect_name);
-    //                                 }
-    //                             );
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //         else
-    //         {
-    //             card.transform.SetParent(UIGameArena.Instance.oponentField);
-    //             card.SetCardInfo();
-    //         }
-    //         StartCoroutine(SummonDelay(card));
-    //     }
-
-    //     CardGameManager.Instance.CMDCompleteAction(NetworkClient.localPlayer.netId, actionID);
-    // }
+    [ClientRpc]
+    public void RPCSummonToken(uint playerID, string jsonToken, string jsonCards, int actionID)
+    {
+        clientEffect.SummonToken(playerID,jsonToken,jsonCards,actionID);
+    }
 
     // [Command(requiresAuthority = false)]
     // public void CMDUnsummon(uint playerID, uint sourceId, string jsonCards)
