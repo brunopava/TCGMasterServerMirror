@@ -6,7 +6,7 @@ public class CardDisplay : MonoBehaviour
 {
     public GameObject sleeve;
 
-    public void ToggleSleeve(bool active)
+    public void ToggleSleeve(bool active = false)
     {
         sleeve.SetActive(active);
     }

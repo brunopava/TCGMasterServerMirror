@@ -1182,6 +1182,8 @@ GameObject:
   - component: {fileID: 648989577}
   - component: {fileID: 648989576}
   - component: {fileID: 648989575}
+  - component: {fileID: 648989578}
+  - component: {fileID: 648989579}
   m_Layer: 0
   m_Name: '[GameManager]'
   m_TagString: Untagged
@@ -1205,16 +1207,12 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0.1
   cardPrefab: {fileID: 6017587699311720321, guid: 7ed31f92c39800249baece8c9e0e8425, type: 3}
-  connectedPlayers: 
-  temporaryPhaseList: 
-  temporaryTurnCounter: 
-  cardsAttackedThisTurn: 
+  cardSpawnDelay: 0
   playerTurn: 0
   currentTurn: 0
   isGameOver: 0
   victoriousPlayer: 0
   defeatedPlayer: 0
-  cardSpawnDelay: 0
 --- !u!114 &648989576
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1247,6 +1245,34 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &648989578
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 648989574}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 97d20084738595b4ea5d493c7aaf68d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  connectedPlayers: 
+  temporaryPhaseList: 
+  temporaryTurnCounter: 
+  cardsAttackedThisTurn: 
+--- !u!114 &648989579
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 648989574}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26d208799f916534fa99f9cdac668cff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0

@@ -7,18 +7,9 @@ using UnityEngine;
 using Mirror;
 using MasterServerToolkit.MasterServer;
 
-public enum ResourceType
+public class TCGServer:MonoBehaviour
 {
-    Default
-}
-
-public class TCGGameManager : NetworkBehaviour
-{
-    public static TCGGameManager Instance;
-
-    public GameObject cardPrefab;
-
-    //Connected player id's
+	//Connected player id's
     public List<uint> connectedPlayers = new List<uint>();
 
     //This is used when we need confirmation from both players that an action was taken in both clients
@@ -35,30 +26,9 @@ public class TCGGameManager : NetworkBehaviour
     public Dictionary<uint, Dictionary<ResourceType, int>> resourcesByPlayer = new Dictionary<uint, Dictionary<ResourceType, int>>();
     public List<uint> cardsAttackedThisTurn = new List<uint>();
 
-    [SyncVar]
-    public uint playerTurn;
-    [SyncVar]
-    public int currentTurn;
-    [SyncVar]
-    public bool isGameOver = false;
-    [SyncVar]
-    public uint victoriousPlayer;
-    [SyncVar]
-    public uint defeatedPlayer;
-    
-    public float cardSpawnDelay = 0.1f;
-
-    private void Awake()
+    public void OnPlayerConnected(uint playerID)
     {
-        if(Instance == null)
-            Instance = this;
-    }
-
-    [Command(requiresAuthority = false)]
-    public void CMDPlayerConnected(uint playerID)
-    {
-        Debug.Log("CMDPlayerConnected: " + playerID.ToString());
-        if (!connectedPlayers.Contains(playerID))
+    	if (!connectedPlayers.Contains(playerID))
         {
             connectedPlayers.Add(playerID);
 
@@ -82,13 +52,13 @@ public class TCGGameManager : NetworkBehaviour
 
             for (int i = 0; i < TCGConstants.MAX_CARDS_PER_DECK; i++)
             {
-                GameObject card = Instantiate(cardPrefab, new Vector3(-8000, 0.1f, 0), Quaternion.identity);
+                GameObject card = Instantiate(TCGGameManager.Instance.cardPrefab, new Vector3(-8000, 0.1f, 0), Quaternion.identity);
                 CardBehaviour cardBehaviour = card.GetComponent<CardBehaviour>();
                 
                 decksByPlayer[currentPlayer].Add(cardBehaviour);
                 NetworkServer.Spawn(card, player.connectionToClient);
                 
-                await new WaitForSeconds(cardSpawnDelay);
+                await new WaitForSeconds(TCGGameManager.Instance.cardSpawnDelay);
             }
 
             if (!decks.ContainsKey(currentPlayer))
@@ -105,52 +75,12 @@ public class TCGGameManager : NetworkBehaviour
         string json = JsonConvert.SerializeObject(decks);
 
         //ALL PLAYERS CONNECTED
-        RPCAllPlayersConnected(json);
+        TCGGameManager.Instance.RPCAllPlayersConnected(json);
     }
 
-    [ClientRpc]
-    private void RPCAllPlayersConnected(string json)
+    public void DrawInitialCards(uint playerID)
     {
-        Dictionary<uint, List<uint>> decks = JsonConvert.DeserializeObject<Dictionary<uint, List<uint>>>(json);
-
-        List<CardBehaviour> playerCards = new List<CardBehaviour>();
-        List<CardBehaviour> oponentCards = new List<CardBehaviour>();
-
-        foreach (KeyValuePair<uint, List<uint>> currentDeck in decks)
-        {
-            foreach (uint current in currentDeck.Value)
-            {
-                if (NetworkClient.spawned.ContainsKey(current))
-                {
-                    NetworkIdentity cardIdentity = NetworkClient.spawned[current];
-                    CardBehaviour card = cardIdentity.GetComponent<CardBehaviour>();
-
-                    if (card != null)
-                    {
-                        if (card.hasAuthority)
-                        {
-                            card.transform.SetParent(TCGArena.Instance.playerDeck);
-                            playerCards.Add(card);
-                        }
-                        else
-                        {
-                            card.transform.SetParent(TCGArena.Instance.oponentDeck);
-                            oponentCards.Add(card);
-                        }
-                    }
-                }
-            }
-        }
-
-        UIManager.Instance.OnGameStarted();
-
-        CMDDrawInitialCards(NetworkClient.localPlayer.netId);
-    }
-
-    [Command(requiresAuthority = false)]
-    public void CMDDrawInitialCards(uint playerID)
-    {
-        if(!PhaseCheck(playerID))
+    	if(!PhaseCheck(playerID))
         {
             return;
         }
@@ -175,81 +105,12 @@ public class TCGGameManager : NetworkBehaviour
         }
 
         string json = JsonConvert.SerializeObject(handCards);
-        RPCDrawInitialCards(json);
+        TCGGameManager.Instance.RPCDrawInitialCards(json);
     }
 
-    [ClientRpc]
-    private void RPCDrawInitialCards(string json)
+    public void OnEndTurn(uint playerID)
     {
-        List<uint> cards = JsonConvert.DeserializeObject<List<uint>>(json);
-
-        //TODO: ANIMATE CARDS
-        // List<CardBehaviour> playerCardsToAnimate = new List<CardBehaviour>();
-        // List<CardBehaviour> oponentCardsToAnimate = new List<CardBehaviour>();
-
-        foreach (uint current in cards)
-        {
-            NetworkIdentity netiden = NetworkClient.spawned[current];
-            CardBehaviour card = netiden.GetComponent<CardBehaviour>();
-
-            if (card.hasAuthority)
-            {
-                card.transform.SetParent(TCGArena.Instance.playerHand);
-                card.display.ToggleSleeve(false);
-                card.isInteractable = true;
-            }
-            else
-            {
-                card.transform.SetParent(TCGArena.Instance.oponentHand);
-            }
-        }
-    }
-
-    [Command(requiresAuthority = false)]
-    private void CMDStartMatch(uint playerID)
-    {
-        // actionChain.GameStarted(
-        //     ()=>{
-        //         CMDEndTurn(playerTurn);
-        //     }
-        // );
-
-        if(!PhaseCheck(playerID))
-        {
-            return;
-        }
-
-        temporaryTurnCounter = new List<uint>();
-
-        if (!temporaryTurnCounter.Contains(playerTurn))
-        {
-            temporaryTurnCounter.Add(playerTurn);
-        }
-        
-        RPCPlayerTurn();
-    }
-
-    [ClientRpc]
-    private void RPCPlayerTurn()
-    {
-        if (IsMyTurn())
-        {
-            NetworkIdentity player = NetworkClient.spawned[playerTurn];
-            TCGPlayerManager manager = player.GetComponent<TCGPlayerManager>();
-            manager.OnStartTurn();
-        }
-        else
-        {
-            // UIGameArena.Instance.DisableEndTurnButton();
-            // UIGameArena.Instance.DisableResourcesButtons();
-        }
-    }
-
-    //LOGICAL END OF TURN, PASS THE ACTION TO THE OTHER PLAYER AND INCREASE TURN COUNTER
-    [Command(requiresAuthority = false)]
-    public void CMDEndTurn(uint playerID)
-    {
-        // actionChain.ResetTurnInactivity();
+    	// actionChain.ResetTurnInactivity();
         
         cardsAttackedThisTurn = new List<uint>();
 
@@ -293,14 +154,19 @@ public class TCGGameManager : NetworkBehaviour
         DelayedTurnPass();
     }
 
-    //LOGICAL DRAW OF CARDS
-    [Command(requiresAuthority = false)]
-    public void CMDDrawCard(uint playerID, int drawAmount, bool isTurnStart, bool isOponent)
+    //SERVER ONLY
+    private async void DelayedTurnPass()
     {
-        uint targetID = playerID;
+        await new WaitForSeconds(0.5f);
+        TCGGameManager.Instance.RPCPlayerTurn();
+    }
+
+    public void DrawCard(uint playerID, int drawAmount, bool isTurnStart, bool isOponent)
+    {
+    	uint targetID = playerID;
         if(isOponent)
         {
-            targetID = TCGGameManager.Instance.GetOponentID(playerID);
+            targetID = GetOponentID(playerID);
         }
 
         List<uint> draw_cards = new List<uint>();
@@ -340,38 +206,30 @@ public class TCGGameManager : NetworkBehaviour
         }
     }
 
-    //DELIVER CARD TO HAND IN BOTH CLIENTS
-    [ClientRpc]
-    public void RPCDrawCard(string json, bool isTurnStart)
+    public void OnStartMatch(uint playerID)
     {
-        List<uint> cards = JsonConvert.DeserializeObject<List<uint>>(json);
+    	// actionChain.GameStarted(
+        //     ()=>{
+        //         CMDEndTurn(playerTurn);
+        //     }
+        // );
 
-        List<CardBehaviour> playerCardsToAnimate = new List<CardBehaviour>();
-        List<CardBehaviour> oponentCardsToAnimate = new List<CardBehaviour>();
-
-        foreach (uint current in cards)
+        if(!PhaseCheck(playerID))
         {
-            NetworkIdentity netiden = NetworkClient.spawned[current];
-            CardBehaviour card = netiden.GetComponent<CardBehaviour>();
-
-            if (card.hasAuthority)
-            {
-                card.transform.SetParent(TCGArena.Instance.playerHand);
-                card.isInteractable = true;
-            }
-            else
-            {
-                card.transform.SetParent(TCGArena.Instance.oponentHand);
-            }
+            return;
         }
+
+        temporaryTurnCounter = new List<uint>();
+
+        if (!temporaryTurnCounter.Contains(playerTurn))
+        {
+            temporaryTurnCounter.Add(playerTurn);
+        }
+        
+        TCGGameManager.Instance.RPCPlayerTurn();
     }
 
-    //SERVER ONLY
-    private async void DelayedTurnPass()
-    {
-        await new WaitForSeconds(0.5f);
-        RPCPlayerTurn();
-    }
+    // UTILS ===============
 
     //SERVER ONLY
     public bool PhaseCheck(uint playerID)
@@ -388,12 +246,6 @@ public class TCGGameManager : NetworkBehaviour
         }
 
         return false;
-    }
-
-    //CLIENT ONLY
-    public bool IsMyTurn()
-    {
-        return NetworkClient.localPlayer.netId == playerTurn;
     }
 
     //SERVER ONLY
@@ -460,5 +312,49 @@ public class TCGGameManager : NetworkBehaviour
                 }
             }
         }
+    }
+
+
+    public uint playerTurn {
+    	get {
+    		return TCGGameManager.Instance.playerTurn;
+    	}
+    	set{
+    		TCGGameManager.Instance.playerTurn = value;
+    	}
+    }
+
+    public int currentTurn{
+    	get {
+    		return TCGGameManager.Instance.currentTurn;
+    	}
+    	set{
+    		TCGGameManager.Instance.currentTurn = value;
+    	}
+    }
+	public bool isGameOver{
+    	get {
+    		return TCGGameManager.Instance.isGameOver;
+    	}
+    	set{
+    		TCGGameManager.Instance.isGameOver = value;
+    	}
+    }
+
+	public uint victoriousPlayer{
+    	get {
+    		return TCGGameManager.Instance.victoriousPlayer;
+    	}
+    	set{
+    		TCGGameManager.Instance.victoriousPlayer = value;
+    	}
+    }
+	public uint defeatedPlayer{
+    	get {
+    		return TCGGameManager.Instance.defeatedPlayer;
+    	}
+    	set{
+    		TCGGameManager.Instance.defeatedPlayer = value;
+    	}
     }
 }
