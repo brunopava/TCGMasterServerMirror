@@ -78,6 +78,13 @@ public class TCGGameManager : NetworkBehaviour
         gameServer.OnEndTurn(playerID);
     }
 
+    [Command(requiresAuthority = false)]
+    public void CMDCastCard(uint playerID, uint cardNetID)
+    {
+        gameServer.CastCard(playerID, cardNetID);
+    }
+    
+
     #endregion
 
     #region RPCS
@@ -85,7 +92,7 @@ public class TCGGameManager : NetworkBehaviour
     [ClientRpc]
     public void RPCAllPlayersConnected(string json)
     {
-        gameClient.OnGameStarted(json);
+        gameClient.OnDeckSpawnComplete(json);
         CMDDrawInitialCards(NetworkClient.localPlayer.netId);
     }
 
@@ -107,6 +114,19 @@ public class TCGGameManager : NetworkBehaviour
     public void RPCPlayerTurn()
     {
         gameClient.PlayerTurn();
+    }
+
+    //DELIVER CARD TO THE FIELD AND ACTIVATE ITS ON CAST EFFECT ON BOTH CLIENTS
+    [ClientRpc]
+    public void RPCCastCard(uint playerID, int actionID, uint cardNetID)
+    {
+        gameClient.CastCard(playerID, actionID, cardNetID);
+    }
+
+    [ClientRpc]
+    public void RPCSummonCard(uint playerID, int actionID, uint cardNetID)
+    {
+        gameClient.SummonCard(playerID, actionID, cardNetID);
     }
 
     #endregion

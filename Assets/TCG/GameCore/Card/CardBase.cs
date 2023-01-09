@@ -5,5 +5,5 @@ using Mirror;
 
 public class CardBase : NetworkBehaviour
 {
-
+	public bool is_creature;
 }

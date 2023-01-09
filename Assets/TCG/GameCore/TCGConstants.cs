@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class TCGConstants
 {
-    public const int MAX_PLAYERS_CARD_GAME = 1;
+    public const int MAX_PLAYERS_CARD_GAME = 2;
     public const int MAX_CARDS_PER_DECK = 30;
     public const int MAX_CARDS_PER_HAND = 7;
     public const int MAX_CARDS_PER_FIELD = 7;

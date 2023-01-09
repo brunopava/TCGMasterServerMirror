@@ -25,6 +25,7 @@ public class TCGServer:MonoBehaviour
     public Dictionary<uint, int> lifeByPlayer = new Dictionary<uint, int>();
     public Dictionary<uint, Dictionary<ResourceType, int>> resourcesByPlayer = new Dictionary<uint, Dictionary<ResourceType, int>>();
     public List<uint> cardsAttackedThisTurn = new List<uint>();
+    public Dictionary<uint, Dictionary<int, List<uint>>> cardsPlayedByPlayerAndTurn = new Dictionary<uint, Dictionary<int, List<uint>>>();
 
     public void OnPlayerConnected(uint playerID)
     {
@@ -33,6 +34,21 @@ public class TCGServer:MonoBehaviour
             connectedPlayers.Add(playerID);
 
             decksByPlayer.Add(playerID, new List<CardBehaviour>());
+
+            fieldByPlayer.Add(playerID, new List<CardBehaviour>());
+            graveyardByPlayer.Add(playerID, new List<CardBehaviour>());
+            lifeByPlayer.Add(playerID, TCGConstants.PLAYER_INITIAL_LIFE);
+            cardsPlayedByPlayerAndTurn.Add(playerID, new Dictionary<int, List<uint>>());
+
+            //TODO: RESOURCES
+            // Dictionary<CardClass, int> resources = new Dictionary<CardClass, int>();
+            // resources.Add(CardClass.Sport, 0);
+            // resources.Add(CardClass.Politic, 0);
+            // resources.Add(CardClass.Spirituality, 0);
+            // resources.Add(CardClass.Science, 0);
+            // resources.Add(CardClass.Art, 0);
+
+            // resourcesByPlayer.Add(playerID, resources);
 
             if (connectedPlayers.Count == TCGConstants.MAX_PLAYERS_CARD_GAME)
             {
@@ -108,9 +124,32 @@ public class TCGServer:MonoBehaviour
         TCGGameManager.Instance.RPCDrawInitialCards(json);
     }
 
+    public void OnStartMatch(uint playerID)
+    {
+        // actionChain.GameStarted(
+        //     ()=>{
+        //         CMDEndTurn(playerTurn);
+        //     }
+        // );
+
+        if(!PhaseCheck(playerID))
+        {
+            return;
+        }
+
+        temporaryTurnCounter = new List<uint>();
+
+        if (!temporaryTurnCounter.Contains(playerTurn))
+        {
+            temporaryTurnCounter.Add(playerTurn);
+        }
+        
+        TCGGameManager.Instance.RPCPlayerTurn();
+    }
+
     public void OnEndTurn(uint playerID)
     {
-    	// actionChain.ResetTurnInactivity();
+    	ActionChain.Instance.ResetTurnInactivity();
         
         cardsAttackedThisTurn = new List<uint>();
 
@@ -138,18 +177,6 @@ public class TCGServer:MonoBehaviour
                 break;
             }
         }
-
-        #if UNITY_EDITOR 
-            //TODO: This is bad code for release and future testing.
-            //Remove after multiple player mechanics phase
-            if(temporaryTurnCounter.Count == connectedPlayers.Count)
-            {
-                temporaryTurnCounter = new List<uint>();
-                currentTurn++;
-            }
-            string label = "Player: {0} Turn: {1}";
-            UIManager.Instance.debugTurn.text = string.Format(label, playerTurn.ToString(), currentTurn.ToString());
-        #endif
 
         DelayedTurnPass();
     }
@@ -206,27 +233,45 @@ public class TCGServer:MonoBehaviour
         }
     }
 
-    public void OnStartMatch(uint playerID)
+    public void CastCard(uint playerID, uint cardNetID)
     {
-    	// actionChain.GameStarted(
-        //     ()=>{
-        //         CMDEndTurn(playerTurn);
-        //     }
-        // );
+        ActionChain.Instance.AddToChain(
+            "CastCard",
+            (int actionID)=>{
+                NetworkIdentity netiden = NetworkServer.spawned[cardNetID];
+                CardBehaviour card = netiden.GetComponent<CardBehaviour>();
 
-        if(!PhaseCheck(playerID))
+                cardsPlayedByPlayerAndTurn[playerTurn][currentTurn].Add(cardNetID);
+
+                if(card.is_creature)
+                {
+                    handsByPlayer[playerID].Remove(card);
+                    fieldByPlayer[playerID].Add(card);
+                    card.isOnField = true;
+                    card.isDead = false;
+                    card.isAttackEnabled = false;
+                    // card.isAttackEnabled = card.haste;
+
+                    DelayedCardSummon(playerID, actionID, cardNetID);
+                }else{
+                    //TODO: ONLY IF IS CREATURE
+                    handsByPlayer[playerID].Remove(card);
+                    graveyardByPlayer[playerID].Add(card);
+
+                    TCGGameManager.Instance.RPCCastCard(playerID, actionID, cardNetID);
+                }
+            }
+        );
+        if(!ActionChain.Instance.isChainBusy)
         {
-            return;
+            ActionChain.Instance.ResolveChain();
         }
+    }
 
-        temporaryTurnCounter = new List<uint>();
-
-        if (!temporaryTurnCounter.Contains(playerTurn))
-        {
-            temporaryTurnCounter.Add(playerTurn);
-        }
-        
-        TCGGameManager.Instance.RPCPlayerTurn();
+    private async void DelayedCardSummon(uint playerID, int actionID, uint cardNetID)
+    {
+        await new WaitForSeconds(0.1f);
+        TCGGameManager.Instance.RPCSummonCard(playerID, actionID, cardNetID);
     }
 
     // UTILS ===============

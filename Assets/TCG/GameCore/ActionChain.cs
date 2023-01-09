@@ -27,6 +27,8 @@ public class ActionChain : NetworkBehaviour
     public bool isWaiting;
     public int waitingID = 0;
 
+    public Dictionary<int, List<uint>> actionPlayers = new Dictionary<int, List<uint>>();
+
     private void Awake()
     {
         if(Instance == null)
@@ -141,6 +143,22 @@ public class ActionChain : NetworkBehaviour
 
                 waitingID = current.Key;
                 isChainBusy = true;
+            }
+        }
+    }
+
+    [Command(requiresAuthority = false)]
+    public void CMDCompleteAction(uint playerID, int actionID)
+    {
+        if(!actionPlayers.ContainsKey(actionID))
+        {
+            actionPlayers.Add(actionID, new List<uint>());
+            actionPlayers[actionID].Add(playerID);
+        }else{
+            actionPlayers[actionID].Add(playerID);
+            if(actionPlayers[actionID].Count == TCGConstants.MAX_PLAYERS_CARD_GAME)
+            {
+                CompleteAction(actionID);
             }
         }
     }

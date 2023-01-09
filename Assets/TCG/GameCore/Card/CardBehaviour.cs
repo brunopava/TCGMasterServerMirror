@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
+using Mirror;
 
 public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerExitHandler, IDragHandler, IBeginDragHandler, IEndDragHandler, IPointerDownHandler, IPointerUpHandler
 {
@@ -14,6 +15,7 @@ public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerEx
     public bool isDraggable = true;
     public bool isInteractable = false;
     public bool isOnField = false;
+    public bool isDead = false;
     public bool isAttackEnabled = false;
 
     //Detect if the Cursor starts to pass over the GameObject
@@ -123,6 +125,8 @@ public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerEx
         isOnField = true;
         isAttackEnabled = true;
         transform.SetParent(TCGArena.Instance.playerField);
+
+        TCGGameManager.Instance.CMDCastCard(NetworkClient.localPlayer.netId, netId);
     }
 
     public void ReturnToHand()
