@@ -79,17 +79,13 @@ public class TCGClient:MonoBehaviour
 	{
         string label = "Player: {0} Turn: {1}";
         UIManager.Instance.debugTurn.text = string.Format(label, playerTurn.ToString(), currentTurn.ToString());
+        UIManager.Instance.SetEndTurnButtonEnable(IsMyTurn());
 
 		if (IsMyTurn())
         {
             NetworkIdentity player = NetworkClient.spawned[playerTurn];
             TCGPlayerManager manager = player.GetComponent<TCGPlayerManager>();
             manager.OnStartTurn();
-        }
-        else
-        {
-            // UIGameArena.Instance.DisableEndTurnButton();
-            // UIGameArena.Instance.DisableResourcesButtons();
         }
 	}
 
@@ -123,14 +119,20 @@ public class TCGClient:MonoBehaviour
         CardBehaviour card = netiden.GetComponent<CardBehaviour>();
 
         // card.SetCardInfo();
-        // card.display.SetIsPlayable(false);
+        card.display.ToggleSleeve();
         card.isInteractable = false;
         card.isAttackEnabled = false;
         // card.isAttackEnabled = card.haste;
 
+        card.transform.SetParent(null);
+        card.transform.rotation = Quaternion.Euler(Vector3.zero);
+
         if (!card.hasAuthority)
         {
-            card.transform.rotation = Quaternion.Euler(Vector3.zero);
+            
+            card.transform.SetParent(TCGArena.Instance.oponentField);
+
+            
             Sequence cast = TCGAnimations.PutOnEvidenceForSeconds(
                 card, 
                 2f, 
@@ -142,7 +144,10 @@ public class TCGClient:MonoBehaviour
                 }
             );
             cast.Play();
-        }        
+        }else{
+            card.transform.SetParent(TCGArena.Instance.playerField);
+        }  
+
         ActionChain.Instance.CMDCompleteAction(NetworkClient.localPlayer.netId, actionID);
     }
 

@@ -20,8 +20,14 @@ public class UIManager : Singleton<UIManager>
         endTurnButton.onClick.RemoveAllListeners();
         endTurnButton.onClick.AddListener(
             ()=>{
+                SetEndTurnButtonEnable(false);
                 TCGGameManager.Instance.CMDEndTurn(NetworkClient.localPlayer.netId);
             }
         );
+    }
+
+    public void SetEndTurnButtonEnable(bool isEnable)
+    {
+        endTurnButton.interactable = isEnable;
     }
 }

@@ -52,6 +52,8 @@ public class TCGServer:MonoBehaviour
 
             if (connectedPlayers.Count == TCGConstants.MAX_PLAYERS_CARD_GAME)
             {
+                //TODO: RANDOMIZE FIRST PLAYER
+                playerTurn = connectedPlayers[0];
                 LoadCards();
             }
         }
@@ -143,7 +145,9 @@ public class TCGServer:MonoBehaviour
         {
             temporaryTurnCounter.Add(playerTurn);
         }
-        
+
+        cardsPlayedByPlayerAndTurn[playerTurn][currentTurn] = new List<uint>();
+
         TCGGameManager.Instance.RPCPlayerTurn();
     }
 
@@ -176,6 +180,11 @@ public class TCGServer:MonoBehaviour
                 }
                 break;
             }
+        }
+
+        if(!cardsPlayedByPlayerAndTurn[playerTurn].ContainsKey(currentTurn))
+        {
+            cardsPlayedByPlayerAndTurn[playerTurn][currentTurn] = new List<uint>();
         }
 
         DelayedTurnPass();

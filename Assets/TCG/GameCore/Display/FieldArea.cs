@@ -46,6 +46,8 @@ public class FieldArea : MonoBehaviour
                 child.position.y,
                 transform.position.z
             );
+
+            child.rotation = Quaternion.identity;
         }      
     }
 }
