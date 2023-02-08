@@ -27,6 +27,14 @@ public class TCGPlayerManager : NetworkBehaviour
     private async void DelayedStartTurn()
     {
     	Debug.Log("DelayedStartTurn");
+
+        foreach(CardBehaviour card in TCGArena.Instance.GetPlayerField())
+        {
+            card.isInteractable = true;
+            card.isAttackEnabled = true;
+        }
+
+        TCGGameManager.Instance.CMDDrawCard(NetworkClient.localPlayer.netId, 1, true, false);
     }
 
     [TargetRpc]

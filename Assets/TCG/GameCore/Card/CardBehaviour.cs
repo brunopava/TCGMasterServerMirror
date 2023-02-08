@@ -12,11 +12,15 @@ public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerEx
     private bool _isDragging = false;
     private Transform _dropArea;
 
+    public bool isAttackEnabled = false;
     public bool isDraggable = true;
     public bool isInteractable = false;
-    public bool isOnField = false;
-    public bool isDead = false;
-    public bool isAttackEnabled = false;
+
+    //===========
+    float clicked = 0;
+    float clicktime = 0;
+    float clickdelay = 0.5f;
+    //===========
 
     //Detect if the Cursor starts to pass over the GameObject
     public void OnPointerEnter(PointerEventData pointerEventData)
@@ -46,7 +50,46 @@ public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerEx
 
     public void OnPointerDown(PointerEventData pointerEventData)
     {
+        if(transform.parent == TCGArena.Instance.playerHand && TargetSystem.Instance.isTargeting)
+        {
+            TargetSystem.Instance.CancelTargeting(true);
+        }
         
+        List<CardBehaviour> tanks = new List<CardBehaviour>();
+
+        for(int i  = 0; i < TCGArena.Instance.oponentField.transform.childCount; i++)
+        {
+            CardBehaviour card = TCGArena.Instance.oponentField.transform.GetChild(i).GetComponent<CardBehaviour>();
+
+            if(card.tank)
+            {
+                tanks.Add(card);
+            }
+        }
+
+        //ATTACK
+        if(TargetSystem.Instance.isTargeting && TargetSystem.Instance.isAttack)
+        {
+            //No tanks in field or attack a tank
+            if(tanks.Count == 0 || tanks.Contains(this))
+            {
+                TargetSystem.Instance.SelectTarget(this);
+                isAttackEnabled = false;
+            }
+        }else if(TargetSystem.Instance.isTargeting && !TargetSystem.Instance.isOponentOnly && !TargetSystem.Instance.isAttack)
+        {
+            //CAST FRIENDLY
+            TargetSystem.Instance.SelectTarget(this);
+        }else if(TargetSystem.Instance.isTargeting && TargetSystem.Instance.isOponentOnly && !TargetSystem.Instance.isAttack)
+        {
+            //CAST ENEMY
+            TargetSystem.Instance.SelectTarget(this);
+        }
+
+        if (isOnField || transform.parent == TCGArena.Instance.playerHand)
+        {
+            OnDoubleClick();
+        }
     }
 
     public void OnPointerUp(PointerEventData pointerEventData)
@@ -116,7 +159,28 @@ public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerEx
 
     private void AttackComplete(ITarget source, List<ITarget> targets)
     {
+        CardBehaviour card = (source as MonoBehaviour).GetComponent<CardBehaviour>();
+        if(card != null)
+        {
+            uint sourceID = card.netId;
+            uint targetID = 666; //c# forces declaration of a value
+            if(targets.Count == 1)
+            {
+                CardBehaviour target = (targets[0] as MonoBehaviour).GetComponent<CardBehaviour>();
+                if(target != null)
+                {
+                    targetID = target.netId;
+                }else{
+                    // PlayerLifeHitbox playerLife = (targets[0] as MonoBehaviour).GetComponent<PlayerLifeHitbox>();
+                    // if(playerLife != null)
+                    // {
+                    //     targetID = playerLife.netId;
+                    // }
+                }
+            }
 
+            TCGGameManager.Instance.CMDCombat(NetworkClient.connection.identity.netId, sourceID, targetID);
+        }
     }
 
     public void Cast()
@@ -134,5 +198,25 @@ public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerEx
         //TODO:
         //ANIMATE
         transform.SetParent(TCGArena.Instance.playerHand);
+    }
+
+    public void OnDoubleClick()
+    {
+        clicked++;
+        if (clicked == 1) clicktime = Time.time;
+
+        if (clicked > 1 && Time.time - clicktime < clickdelay)
+        {
+            clicked = 0;
+            clicktime = 0;
+            //TODO: chamar popup de detalhes
+            // OpenCardInfo();
+        }
+        else if (clicked > 2 || Time.time - clicktime > 1) clicked = 0;
+    }
+
+    public void UpdateData()
+    {
+        
     }
 }

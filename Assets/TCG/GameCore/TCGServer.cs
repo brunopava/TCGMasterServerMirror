@@ -1,4 +1,4 @@
-using System.Linq;
+    using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -75,6 +75,11 @@ public class TCGServer:MonoBehaviour
                 
                 decksByPlayer[currentPlayer].Add(cardBehaviour);
                 NetworkServer.Spawn(card, player.connectionToClient);
+
+                cardBehaviour.cardID = Random.Range(0,100);
+                // cardBehaviour.cardID = i;
+                cardBehaviour.ownerID = currentPlayer;
+
                 
                 await new WaitForSeconds(TCGGameManager.Instance.cardSpawnDelay);
             }
@@ -94,6 +99,140 @@ public class TCGServer:MonoBehaviour
 
         //ALL PLAYERS CONNECTED
         TCGGameManager.Instance.RPCAllPlayersConnected(json);
+    }
+
+
+    public void ResolveCombat(uint playerID, uint attackerID, uint targetID)
+    {
+        if(!NetworkServer.spawned.ContainsKey(attackerID) && !NetworkServer.spawned.ContainsKey(targetID))
+        {
+            return;
+        }
+
+        CardBehaviour attacker_card = NetworkServer.spawned[attackerID].GetComponent<CardBehaviour>();
+        CardBehaviour target_card = null;
+        // PlayerLifeHitbox playerLife = null;
+        bool isLife =  false;
+        bool shouldSkip = false;
+
+        NetworkServer.spawned[targetID].TryGetComponent(out target_card);
+
+        // isLife = NetworkServer.spawned[targetID].TryGetComponent(out playerLife);
+        // if(!isLife)
+        // {
+            
+
+            // if(target != null)
+            // {
+            //     if(!shouldSkip)
+            //     {
+            //         shouldSkip = target.isDead;
+            //     }
+            // }
+        // }
+
+        if(!attacker_card.isDead && !target_card.isDead)
+        {
+            ActionChain.Instance.AddToChain(
+                "CMDCombat",
+                (int actionID)=>
+                {
+                    CardBehaviour attacker = attacker_card;
+                    CardBehaviour target = target_card;
+                    
+                    bool shouldTrample = false;
+
+                    if(attacker.double_hit && !cardsAttackedThisTurn.Contains(attackerID))
+                    {
+                        attacker.isAttackEnabled = true;
+                    }
+                    else if(cardsAttackedThisTurn.Contains(attackerID) && attacker.double_hit)
+                    {
+                        attacker.isAttackEnabled = false;
+                    }
+
+                    if(!attacker.double_hit)
+                    {
+                        attacker.isAttackEnabled = false;
+                    }
+
+                    if(!cardsAttackedThisTurn.Contains(attackerID))
+                    {
+                        cardsAttackedThisTurn.Add(attackerID);
+                    }
+
+                    uint oponentID = GetOponentID(playerID);
+
+                    if (NetworkServer.spawned[targetID].TryGetComponent(out target))
+                    {
+                        int attackerAttack = attacker.attack;
+                        int targetHitpoints = target.hit_points;
+                        
+                        if(target.TakeDamage(attacker.attack) == true)
+                        {
+                            if (attacker.death_touch && !target.barrier || target.isDead)
+                            {
+                                UniversalDeathResolver(target);
+                            }
+                        }
+
+                        if(attacker.TakeDamage(target.attack) == true)
+                        {
+                            if(target.death_touch && !attacker.barrier || attacker.isDead)
+                            {
+                                UniversalDeathResolver(attacker);
+                            }
+                        }
+
+                        if(target.isDead)
+                        {
+                            UniversalDeathResolver(target);
+                        }
+                        
+                        if(attacker.isDead)
+                        {
+                            UniversalDeathResolver(attacker);
+                        }
+
+                        if (!attacker.isDead)
+                        {
+                            if (attacker.trample && attackerAttack > targetHitpoints)
+                            {
+                                shouldTrample = true;
+                                // lifeByPlayer[oponentID] -= 1;
+                                // lifeHitboxByPlayer[oponentID].currentLife = lifeByPlayer[oponentID];
+
+                                // CheckIsGameOver(playerID);
+                            }
+                        }
+
+                        if (!shouldTrample)
+                        {
+                            TCGGameManager.Instance.RPCResolveCombat(playerID, actionID, attackerID, targetID);
+                        }
+                        else
+                        {
+                            // RPCResolveTrampleCombat(playerID, actionID, attackerID, targetID, lifeHitboxByPlayer[oponentID].netId);
+                        }
+                    }
+                    // else if (NetworkServer.spawned[targetID].TryGetComponent(out playerLife))
+                    // {
+                    //     lifeByPlayer[oponentID] -= 1;
+
+                    //     lifeHitboxByPlayer[oponentID].currentLife = lifeByPlayer[oponentID];
+
+                    //     CheckIsGameOver(playerID);
+
+                    //     RPCResolveDirectHit(lifeHitboxByPlayer[oponentID].netId, attackerID, actionID);
+                    // }
+                }
+            );
+
+            if(!ActionChain.Instance.isChainBusy)
+            {
+                ActionChain.Instance.ResolveChain();
+            }
+        }
     }
 
     public void DrawInitialCards(uint playerID)
@@ -317,11 +456,30 @@ public class TCGServer:MonoBehaviour
         return oponentID;
     }
 
+    //SERVER ONLY
+    public void UniversalDeathResolver(CardBehaviour target)
+    {
+        uint ownerID = target.ownerID;
+        uint oponentID = GetOponentID(ownerID);
+
+        target.isDead = true;
+        target.isOnField = false;
+
+        fieldByPlayer[ownerID].Remove(target);
+
+        if(!target.isToken)
+        {
+            graveyardByPlayer[ownerID].Add(target);
+        }
+    }
+
     public void CheckIsGameOver(uint playerID)
     {
         isGameOver = false;
         uint targetID = playerID;
         uint oponentID = GetOponentID(playerID);
+        if(oponentID == 666)
+            return;
 
         if (decksByPlayer[playerID].Count <= 0)
         {

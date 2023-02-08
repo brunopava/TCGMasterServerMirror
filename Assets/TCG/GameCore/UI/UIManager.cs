@@ -30,4 +30,9 @@ public class UIManager : Singleton<UIManager>
     {
         endTurnButton.interactable = isEnable;
     }
+    
+    public void SetDebugText(string text)
+    {
+        debugTurn.text = text;
+    }
 }

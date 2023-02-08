@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Mirror;
+using com.yah.LineRendererDemo;
 
 public delegate void TargetSuccess (ITarget source, List<ITarget> targets);
 public delegate void TargetCancel (string json);
@@ -10,8 +11,21 @@ public delegate void OnTargetBegin();
 
 public class TargetSystem : Singleton<TargetSystem>
 {
-    public Image arrow;
-    private RectTransform _arrowRect;
+    [Header("Line Animation params")]
+    [SerializeField] private LineRenderer castLine = null; // Actual line renderer
+    [Space(10)]
+    [SerializeField] private float inActiveLength = 0.25f;
+    [SerializeField] private float inActiveWidth = 0.01f;
+    [SerializeField] private float activeWidth = 0.1f;
+    [Space(10)]
+    //These are for the Bezier curve smooth follow
+    [SerializeField] private float curveActiveFollowSpeed = 20;
+    [SerializeField] private float curveInActiveFollowSpeed = 100;
+    [SerializeField] private float curveHitPointOffset = 0.25f;
+    [SerializeField] private Transform[] curvePoints = null;
+    [SerializeField] private int numberOfPointsOnCurve = 25;
+    private Bezier curveGenerator = null;
+    private Vector3 curvePointPosition = Vector3.zero;
 
     private List<ITarget> _targets;
     private Transform _source;
@@ -78,30 +92,20 @@ public class TargetSystem : Singleton<TargetSystem>
     private void Awake()
     {
         _targets = new List<ITarget>();
-        _arrowRect = arrow.GetComponent<RectTransform>();
-        arrow.gameObject.SetActive(false);
-        onBeginTargetCallbacks = new List<OnTargetBegin>();
-    }
 
-    bool foundTarget = false;
+        onBeginTargetCallbacks = new List<OnTargetBegin>();
+
+        curveGenerator = new Bezier(numberOfPointsOnCurve);
+        castLine.positionCount = numberOfPointsOnCurve;
+
+        castLine.gameObject.SetActive(false);
+    }
 
     private void Update()
     {
         if(_isTargeting)
         {
-            Vector3 mousePos = Input.mousePosition;
-
-            _startPosition = Camera.main.WorldToScreenPoint(_source.position);
-            _arrowRect.position = _startPosition;
-
-            float distance = Vector3.Distance(_arrowRect.position, new Vector3(mousePos.x, mousePos.y, 0));
-            _arrowRect.sizeDelta = new Vector2(_arrowRect.sizeDelta.x, distance-50f);
-
-            float endPosX = mousePos.x - _startPosition.x;
-            float endPosY = mousePos.y - _startPosition.y;
-
-            float angle = (Mathf.Atan2(endPosX, endPosY) * Mathf.Rad2Deg) * -1;
-            _arrowRect.rotation = Quaternion.Euler(new Vector3(0, 0, angle));
+            DrawLine();
 
             if(Input.GetMouseButton(1))
             {
@@ -110,30 +114,51 @@ public class TargetSystem : Singleton<TargetSystem>
         }
     }
 
+    public float offsetX = 1f;
+
+    public float offsetZ = 1f;
+
+    private void DrawLine()
+    {
+        Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+
+        float x = curvePoints[0].position.x + (mousePos.x - curvePoints[0].position.x) / 2;
+        float y = 5f;
+        float z = curvePoints[0].position.z + (mousePos.z - curvePoints[0].position.z) / 2;
+
+        curvePointPosition = new Vector3(x + (mousePos.x*offsetX), y, z+offsetZ);
+        // curvePointPosition = new Vector3(mousePos.x, mousePos.y, mousePos.z) + (mousePos.normalized * curveHitPointOffset);
+        curvePoints[1].position = Vector3.Lerp(curvePoints[1].position, curvePointPosition, curveActiveFollowSpeed * Time.deltaTime);
+
+        //set endpoint
+        curvePoints[2].position = Vector3.Lerp(curvePoints[2].position, new Vector3(mousePos.x, 0.1f, mousePos.z), curveActiveFollowSpeed * Time.deltaTime);
+
+        Vector3[] newPositions = curveGenerator.GetQuadraticCurvePoints(curvePoints[0].position, curvePoints[1].position, curvePoints[2].position);
+        castLine.SetPositions(newPositions);
+        castLine.startWidth = activeWidth;
+        castLine.endWidth = activeWidth;
+    }
+
     private Vector3 _startPosition;
 
     public void BeginTargeting(ITarget source, TargetSuccess successCallback=null, TargetCancel cancelCallback=null, int targetAmount=1)
     {
+
         if(!_isTargeting)
         {
 
             _targetAmount = targetAmount;
             _source = (source as MonoBehaviour).transform;
             _sourceTarget = source;
-            arrow.gameObject.SetActive(true);
             _isTargeting = true;
             onSuccessCallback = successCallback;
             onCancelCallback = cancelCallback;
-            
-            // _isTargeting = true;
 
-            // Debug.Log(_source);
-            // Debug.Log(_source.position);
-            // Debug.Log(Camera.main.ScreenToWorldPoint(Input.mousePosition));
-            // Debug.Log(Camera.main.ScreenToWorldPoint(_source.position));
+            Debug.Log("BeginTargeting From: "+_source.name);
 
-            // Debug.Log(source);
-            // Debug.Log(_sourceTarget);
+            curvePoints[0].localPosition = _source.position;
+
+            castLine.gameObject.SetActive(true);
 
             foreach (OnTargetBegin callback in onBeginTargetCallbacks)
             {
@@ -144,17 +169,20 @@ public class TargetSystem : Singleton<TargetSystem>
 
     public void CancelTargeting(bool sendCallback=false)
     {
+        Debug.Log("CancelTargeting");
         isAttack = false;
         _isOponentOnly = true;
         _isAllyOnly = false;
 
-        arrow.gameObject.SetActive(false);
         _isTargeting = false;
         _source = null;
         _targets = new List<ITarget>();
         _sourceTarget = null;
 
-        // Debug.Log("CANCEL");
+        castLine.gameObject.SetActive(false);
+
+        curvePoints[1].position = Vector3.zero;
+        curvePoints[2].position = curvePoints[0].localPosition;
 
         if(sendCallback && onCancelCallback != null)
             onCancelCallback("cancel-targeting");
@@ -175,7 +203,7 @@ public class TargetSystem : Singleton<TargetSystem>
 
         if(_isAllyOnly && !card.hasAuthority && !_isOponentOnly)
         {
-            Debug.Log("CANCEL1");
+            // Debug.Log("CANCEL1");
             //HIS CARD
             CancelTargeting(true);
             return;
@@ -183,7 +211,7 @@ public class TargetSystem : Singleton<TargetSystem>
 
         if(_isOponentOnly && card.hasAuthority && !_isAllyOnly)
         {
-            Debug.Log("CANCEL2");
+            // Debug.Log("CANCEL2");
             //MY CARD
             CancelTargeting(true);
             return;
@@ -193,7 +221,7 @@ public class TargetSystem : Singleton<TargetSystem>
         {
             if(!cardBehaviour.isOnField)
             {
-                Debug.Log("CANCEL3");
+                // Debug.Log("CANCEL3");
                 CancelTargeting(true);
                 return;
             }

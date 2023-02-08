@@ -11,8 +11,32 @@ public class TCGClient:MonoBehaviour
 {
 	public Transform gameArena;
 
+    public Dictionary<int, Texture> cardsSprites;
+    public void LoadCards()
+    {
+        cardsSprites = new Dictionary<int, Texture>();
+
+        Texture[] sprites = Resources.LoadAll<Texture>("Images/cards");
+
+        for(int i = 0; i < sprites.Length; i++)
+        {
+            cardsSprites.Add(i, sprites[i]);
+        }
+        // foreach(Sprite current in sprites)
+        // {
+        //     string identifier = current.name.Split('_')[0];
+        //     int id = 0;
+        //     if(int.TryParse(identifier, out id))
+        //     {
+                
+        //     }
+        // }
+    }
+
 	public void OnDeckSpawnComplete(string json)
 	{
+        LoadCards();
+
 		Dictionary<uint, List<uint>> decks = JsonConvert.DeserializeObject<Dictionary<uint, List<uint>>>(json);
 
         List<CardBehaviour> playerCards = new List<CardBehaviour>();
@@ -26,6 +50,8 @@ public class TCGClient:MonoBehaviour
                 {
                     NetworkIdentity cardIdentity = NetworkClient.spawned[current];
                     CardBehaviour card = cardIdentity.GetComponent<CardBehaviour>();
+                    // card.Load();
+                    card.display.SetCardImage(cardsSprites[card.cardID]);
 
                     if (card != null)
                     {
@@ -373,6 +399,76 @@ public class TCGClient:MonoBehaviour
 
             SendToGraveyard.Play();
         }
+    }
+
+    public void ResolveCombat(uint playerID, int actionID, uint attackerID, uint targetID)
+    {
+        Debug.Log("ResolveCombat");
+
+        CardBehaviour attacker = NetworkClient.spawned[attackerID].GetComponent<CardBehaviour>();
+        CardBehaviour target = NetworkClient.spawned[targetID].GetComponent<CardBehaviour>();
+
+        attacker.display.SetIsPlayable(false);
+
+        int damage = attacker.attack * -1;
+        int damageTaken = target.attack * -1;
+
+        //TODO: ATTACK LIFE
+        // Sequence attack = TCGAnimations.AttackLife(
+
+        Sequence attack = TCGAnimations.AttackCard(
+            attacker.display.transform, 
+            target.display.transform,
+            () =>
+            {
+                
+            },
+            () =>
+            {
+                // if(damage!=0)
+                // {
+                //     FloatingText.Instance.AnimateFloatingText(
+                //          target.cardVisual.hitPointText.GetComponent<RectTransform>().position,
+                //          damage);
+                // }
+                // if(damageTaken!=0)
+                // {
+                //     FloatingText.Instance.AnimateFloatingText(
+                //          attacker.cardVisual.hitPointText.GetComponent<RectTransform>().position,
+                //          damageTaken);
+                // }
+
+                DelayedAttackResolver(attacker, target, actionID);
+            }
+        );
+        attack.Play();
+
+        //TODO: DOUBLE HIT
+        // if(attacker.hasAuthority && attacker.double_hit)
+        // {
+        //     attacker.cardVisual.SetIsPlayable(attacker.isAttackEnabled);
+        // }
+    }
+
+    //Combat needs a delay to resolve some stuff and check if cards died
+    //CLIENT
+    private async void DelayedAttackResolver(CardBehaviour attacker, CardBehaviour target, int actionID)
+    {
+        uint playerID = NetworkClient.localPlayer.netId;
+
+        attacker.UpdateData();
+        target.UpdateData();
+        attacker.display.SetIsPlayable(false);
+        target.display.SetIsPlayable(false);
+
+        await new WaitForSeconds(0.1f);
+
+        List<uint> cards = new List<uint>();
+        cards.Add(attacker.netId);
+        cards.Add(target.netId);
+        string json = JsonConvert.SerializeObject(cards);
+
+        // effectResolver.DelayedEffectResolver(playerID, json, actionID);
     }
 
 	//CLIENT ONLY

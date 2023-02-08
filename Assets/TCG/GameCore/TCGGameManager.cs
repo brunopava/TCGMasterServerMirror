@@ -70,12 +70,19 @@ public class TCGGameManager : NetworkBehaviour
         gameServer.DrawCard(playerID,drawAmount,isTurnStart,isOponent);
     }
 
+    [Command(requiresAuthority = false)]
+    public void CMDCombat(uint playerID, uint attackerID, uint targetID)
+    {
+        gameServer.ResolveCombat(playerID,attackerID,targetID);
+    }
+
     // END OF TURN, PASS THE ACTION TO THE OTHER PLAYER AND INCREASE TURN COUNTER
     // ME + YOU = 1 TURN 
     [Command(requiresAuthority = false)]
     public void CMDEndTurn(uint playerID)
     {
         gameServer.OnEndTurn(playerID);
+        UIManager.Instance.SetDebugText("Player: "+playerTurn.ToString()+"\n"+"Turn: "+currentTurn);
     }
 
     [Command(requiresAuthority = false)]
@@ -127,6 +134,12 @@ public class TCGGameManager : NetworkBehaviour
     public void RPCSummonCard(uint playerID, int actionID, uint cardNetID)
     {
         gameClient.SummonCard(playerID, actionID, cardNetID);
+    }
+
+    [ClientRpc]
+    public void RPCResolveCombat(uint playerID, int actionID, uint attackerID, uint targetID)
+    {
+        gameClient.ResolveCombat(playerID, actionID, attackerID, targetID);
     }
 
     #endregion
