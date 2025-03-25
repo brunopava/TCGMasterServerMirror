@@ -10,22 +10,18 @@ public class CardBase : NetworkBehaviour
     [SyncVar]
     public uint ownerID;
     [SyncVar]
-    public string effect_id;
+    public string effects;
 
-    public List<int> card_effects{
+    public List<string> card_effects{
         get {
-            List<int> list = new List<int>();
+            List<string> list = new List<string>();
 
-            string[] effects = effect_id.Split('_');
-            foreach(string current in effects)
+            string[] splitEffects = effects.Split('_');
+            foreach(string current in splitEffects)
             {
                 if(!string.IsNullOrEmpty(current))
                 {
-                    int id = 666;
-                    if(int.TryParse(current, out id))
-                    {
-                        list.Add(id);
-                    }
+                    list.Add(current);
                 }
             }
             return list;
@@ -62,7 +58,9 @@ public class CardBase : NetworkBehaviour
     public bool death_touch = false;
     [SyncVar]
     public bool isToken = false;
-
+    [SyncVar]
+    public bool isAttackEnabled = false;
+    
     [SyncVar]
     public int maxHp;
     [SyncVar]
@@ -149,5 +147,104 @@ public class CardBase : NetworkBehaviour
         double_hit = false;
         death_touch = false;
         isToken = false;
+    }
+
+
+    [Command(requiresAuthority = false)]
+    public void CMDOnCardDeath()
+    {
+
+    }
+
+    [ClientRpc]
+    public void RPCOnCardDeath(uint playerID)
+    {
+        // UpdateData();
+
+        // //On complete do this: 
+        // if (hasAuthority)
+        // {
+        //     foreach(int effect_id in card_effects)
+        //     {
+        //         if (EffectFactory.Instance.allEffects.ContainsKey(effect_id))
+        //         {
+        //             CardEffectBase effect = EffectFactory.Instance.allEffects[effect_id];   
+        //             if (effect.on_death_effect)
+        //             {
+        //                 effect.OnDie(
+        //                     card,
+        //                     () => {
+        //                         Instantiate(ParticleManager.Instance.deathrattleParticle,GetComponent<RectTransform>().position, Quaternion.identity);
+        //                         Debug.Log("Casted OnDie: " + effect.effect_name);
+        //                     }
+        //                 );
+        //             }
+
+        //             if(effect.is_aura)
+        //             {
+        //                 if(effect is DecreaseCostEffect)
+        //                 {
+        //                     DecreaseCostEffect auraEffect = (effect as DecreaseCostEffect);
+                            
+        //                     auraEffect.OnDie(card, 
+        //                         ()=>{
+        //                             Debug.Log("Casted OnDie: " + auraEffect.effect_name);
+        //                         }
+        //                     );
+        //                 }else if(effect is IncreaseCostEffect)
+        //                 {
+        //                     IncreaseCostEffect auraEffect = (effect as IncreaseCostEffect);
+                            
+        //                     auraEffect.OnDie(card, 
+        //                         ()=>{
+        //                             Debug.Log("Casted OnDie: " + auraEffect.effect_name);
+        //                         }
+        //                     );
+        //                 }
+        //             }
+        //         }
+        //     }
+
+        //     if(!isToken)
+        //     {
+        //         transform.SetParent(UIGameArena.Instance.playerGraveyard);
+        //     }else{
+        //         CardGameManager.Instance.CMDDestroyToken(playerID, netId);
+        //     }
+        // }
+        // else
+        // {
+        //     transform.SetParent(UIGameArena.Instance.oponentGraveyard);
+        // }
+
+        // List<CardBehaviour> field = UIGameArena.Instance.GetPlayerField();
+        // foreach(CardBehaviour current in field)
+        // {
+        //     if(current.hasAuthority)
+        //     {
+        //         foreach(int effect_id in current.card_effects)
+        //         {
+        //             if (EffectFactory.Instance.allEffects.ContainsKey(effect_id))
+        //             {
+        //                 CardEffectBase effect = EffectFactory.Instance.allEffects[effect_id];
+
+        //                 if(effect.on_creature_death)
+        //                 {
+        //                     effect.OnCreatureDeath(
+        //                         current,
+        //                         () => {
+        //                             Debug.Log("Casted OnCreatureDeath: " + effect.effect_name + "___" + NetworkClient.localPlayer.netId);
+        //                         }
+        //                     );
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+
+        // if(card != null && !isToken)
+        // {
+        //     Reset();
+        // }
     }
 }

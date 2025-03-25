@@ -154,7 +154,7 @@ public class TargetSystem : Singleton<TargetSystem>
             onSuccessCallback = successCallback;
             onCancelCallback = cancelCallback;
 
-            Debug.Log("BeginTargeting From: "+_source.name);
+            // Debug.Log("BeginTargeting From: "+_source.name);
 
             curvePoints[0].localPosition = _source.position;
 
@@ -169,7 +169,7 @@ public class TargetSystem : Singleton<TargetSystem>
 
     public void CancelTargeting(bool sendCallback=false)
     {
-        Debug.Log("CancelTargeting");
+        // Debug.Log("CancelTargeting");
         isAttack = false;
         _isOponentOnly = true;
         _isAllyOnly = false;
@@ -203,7 +203,7 @@ public class TargetSystem : Singleton<TargetSystem>
 
         if(_isAllyOnly && !card.hasAuthority && !_isOponentOnly)
         {
-            // Debug.Log("CANCEL1");
+            Debug.Log("CANCEL1: Should target only alies.");
             //HIS CARD
             CancelTargeting(true);
             return;
@@ -211,7 +211,7 @@ public class TargetSystem : Singleton<TargetSystem>
 
         if(_isOponentOnly && card.hasAuthority && !_isAllyOnly)
         {
-            // Debug.Log("CANCEL2");
+            Debug.Log("CANCEL2: Should target only oponents.");
             //MY CARD
             CancelTargeting(true);
             return;
@@ -221,7 +221,7 @@ public class TargetSystem : Singleton<TargetSystem>
         {
             if(!cardBehaviour.isOnField)
             {
-                // Debug.Log("CANCEL3");
+                Debug.Log("CANCEL3: Card is not on field.");
                 CancelTargeting(true);
                 return;
             }
@@ -235,6 +235,7 @@ public class TargetSystem : Singleton<TargetSystem>
             {
                 onSuccessCallback(_sourceTarget, _targets);
             }
+
             CancelTargeting();
         } 
     }

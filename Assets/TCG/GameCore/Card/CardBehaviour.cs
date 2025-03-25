@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using Mirror;
+using DevionGames.UIWidgets;
 
 public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerExitHandler, IDragHandler, IBeginDragHandler, IEndDragHandler, IPointerDownHandler, IPointerUpHandler
 {
@@ -11,8 +12,7 @@ public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerEx
 
     private bool _isDragging = false;
     private Transform _dropArea;
-
-    public bool isAttackEnabled = false;
+    
     public bool isDraggable = true;
     public bool isInteractable = false;
 
@@ -25,6 +25,15 @@ public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerEx
     //Detect if the Cursor starts to pass over the GameObject
     public void OnPointerEnter(PointerEventData pointerEventData)
     {
+        // if(isOnField)
+        // {
+        //     TooltipTrigger trigger = gameObject.GetComponent<TooltipTrigger>();
+        //     Debug.Log(trigger);
+        //     if(trigger != null)
+        //     {
+        //         trigger.enabled = true;
+        //     }
+        // }
         //Output to console the GameObject's name and the following message
         // Debug.Log("Cursor Entering " + name + " GameObject");
     }
@@ -32,6 +41,15 @@ public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerEx
     //Detect when Cursor leaves the GameObject
     public void OnPointerExit(PointerEventData pointerEventData)
     {
+        // if(isOnField)
+        // {
+        //     TooltipTrigger trigger = gameObject.GetComponent<TooltipTrigger>();
+        //     Debug.Log(trigger);
+        //     if(trigger != null)
+        //     {
+        //         trigger.enabled = false;
+        //     }
+        // }
         //Output the following message with the GameObject's name
         // Debug.Log("Cursor Exiting " + name + " GameObject");
     }
@@ -86,9 +104,14 @@ public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerEx
             TargetSystem.Instance.SelectTarget(this);
         }
 
-        if (isOnField || transform.parent == TCGArena.Instance.playerHand)
+        if (isOnField)
         {
             OnDoubleClick();
+        }
+
+        if (pointerEventData.button == PointerEventData.InputButton.Right && !isOnField)
+        {
+            UIManager.Instance.OpenContextMenu();
         }
     }
 
@@ -113,7 +136,7 @@ public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerEx
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        if (!isInteractable)
+        if (!isInteractable || !TCGGameManager.Instance.gameClient.IsMyTurn())
         {
             return;
         }
@@ -126,8 +149,11 @@ public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerEx
             return;
         }
 
-        _isDragging = true;
-        transform.SetParent(null); 
+        if(!isOnField && !isDead)
+        {
+            _isDragging = true;
+            transform.SetParent(null); 
+        }
     }
 
     public void OnEndDrag(PointerEventData eventData)
@@ -160,6 +186,7 @@ public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerEx
     private void AttackComplete(ITarget source, List<ITarget> targets)
     {
         CardBehaviour card = (source as MonoBehaviour).GetComponent<CardBehaviour>();
+        
         if(card != null)
         {
             uint sourceID = card.netId;
@@ -186,8 +213,6 @@ public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerEx
     public void Cast()
     {
         isDraggable = false;
-        isOnField = true;
-        isAttackEnabled = true;
         transform.SetParent(TCGArena.Instance.playerField);
 
         TCGGameManager.Instance.CMDCastCard(NetworkClient.localPlayer.netId, netId);
@@ -211,12 +236,13 @@ public class CardBehaviour : CardBase, ITarget, IPointerEnterHandler, IPointerEx
             clicktime = 0;
             //TODO: chamar popup de detalhes
             // OpenCardInfo();
+            UIManager.Instance.ShowRadialMenu(gameObject);
         }
         else if (clicked > 2 || Time.time - clicktime > 1) clicked = 0;
     }
 
     public void UpdateData()
     {
-        
+        display.UpdateData(this);
     }
 }

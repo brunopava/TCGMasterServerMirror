@@ -17,6 +17,7 @@ public class TCGGameManager : NetworkBehaviour
     public static TCGGameManager Instance;
 
     public GameObject cardPrefab;
+    public GameObject botPrefab;
 
     public float cardSpawnDelay = 0.1f;
 
@@ -32,7 +33,10 @@ public class TCGGameManager : NetworkBehaviour
     public uint defeatedPlayer;
 
     public TCGServer gameServer;
-    private TCGClient gameClient;
+    public TCGClient gameClient;
+
+    public bool isBotGame = true;
+    public bool isBotCreated = false;
 
     private void Awake()
     {
@@ -41,6 +45,15 @@ public class TCGGameManager : NetworkBehaviour
 
         gameServer = GetComponent<TCGServer>();
         gameClient = GetComponent<TCGClient>();
+    }
+
+    public override void OnStartServer()
+    {
+        if(isBotGame && !isBotCreated)
+        {
+            gameServer.CreateBot();
+            isBotCreated = true;
+        }
     }
 
     #region COMMANDS
@@ -55,29 +68,31 @@ public class TCGGameManager : NetworkBehaviour
     [Command(requiresAuthority = false)]
     public void CMDStartMatch(uint playerID)
     {
+        Debug.Log("CMDStartMatch: " + playerID.ToString());
         gameServer.OnStartMatch(playerID);
     }
 
     [Command(requiresAuthority = false)]
     public void CMDDrawInitialCards(uint playerID)
     {
+        Debug.Log("CMDDrawInitialCards: " + playerID.ToString());
         gameServer.DrawInitialCards(playerID);
     }
 
     [Command(requiresAuthority = false)]
     public void CMDDrawCard(uint playerID, int drawAmount, bool isTurnStart, bool isOponent)
     {
+        Debug.Log("CMDDrawCard: " + playerID.ToString());
         gameServer.DrawCard(playerID,drawAmount,isTurnStart,isOponent);
     }
 
     [Command(requiresAuthority = false)]
     public void CMDCombat(uint playerID, uint attackerID, uint targetID)
     {
+        Debug.Log("CMDCombat");
         gameServer.ResolveCombat(playerID,attackerID,targetID);
     }
-
-    // END OF TURN, PASS THE ACTION TO THE OTHER PLAYER AND INCREASE TURN COUNTER
-    // ME + YOU = 1 TURN 
+    
     [Command(requiresAuthority = false)]
     public void CMDEndTurn(uint playerID)
     {
@@ -88,6 +103,8 @@ public class TCGGameManager : NetworkBehaviour
     [Command(requiresAuthority = false)]
     public void CMDCastCard(uint playerID, uint cardNetID)
     {
+        // Debug.Log(playerID);
+        // Debug.Log(cardNetID);
         gameServer.CastCard(playerID, cardNetID);
     }
     
@@ -100,17 +117,14 @@ public class TCGGameManager : NetworkBehaviour
     public void RPCAllPlayersConnected(string json)
     {
         gameClient.OnDeckSpawnComplete(json);
-        CMDDrawInitialCards(NetworkClient.localPlayer.netId);
     }
 
-    //DRAW INITIAL AMOUNT OF CARDS
     [ClientRpc]
     public void RPCDrawInitialCards(string json)
     {
         gameClient.DrawInitialCards(json);
     }
 
-    //DELIVER CARD TO HAND IN BOTH CLIENTS
     [ClientRpc]
     public void RPCDrawCard(string json, bool isTurnStart)
     {
@@ -123,16 +137,17 @@ public class TCGGameManager : NetworkBehaviour
         gameClient.PlayerTurn();
     }
 
-    //DELIVER CARD TO THE FIELD AND ACTIVATE ITS ON CAST EFFECT ON BOTH CLIENTS
     [ClientRpc]
     public void RPCCastCard(uint playerID, int actionID, uint cardNetID)
     {
+        Debug.Log("RPCCastCard");
         gameClient.CastCard(playerID, actionID, cardNetID);
     }
 
     [ClientRpc]
     public void RPCSummonCard(uint playerID, int actionID, uint cardNetID)
     {
+        Debug.Log("RPCSummonCard");
         gameClient.SummonCard(playerID, actionID, cardNetID);
     }
 

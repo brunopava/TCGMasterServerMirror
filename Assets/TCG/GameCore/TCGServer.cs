@@ -39,21 +39,32 @@ public class TCGServer:MonoBehaviour
             graveyardByPlayer.Add(playerID, new List<CardBehaviour>());
             lifeByPlayer.Add(playerID, TCGConstants.PLAYER_INITIAL_LIFE);
             cardsPlayedByPlayerAndTurn.Add(playerID, new Dictionary<int, List<uint>>());
-
-            //TODO: RESOURCES
-            // Dictionary<CardClass, int> resources = new Dictionary<CardClass, int>();
-            // resources.Add(CardClass.Sport, 0);
-            // resources.Add(CardClass.Politic, 0);
-            // resources.Add(CardClass.Spirituality, 0);
-            // resources.Add(CardClass.Science, 0);
-            // resources.Add(CardClass.Art, 0);
-
-            // resourcesByPlayer.Add(playerID, resources);
+            cardsPlayedByPlayerAndTurn[playerID].Add(currentTurn, new List<uint>());
 
             if (connectedPlayers.Count == TCGConstants.MAX_PLAYERS_CARD_GAME)
             {
                 //TODO: RANDOMIZE FIRST PLAYER
                 playerTurn = connectedPlayers[0];
+
+                // int diceRoll = Random.Range(1, 7);
+
+                // Dictionary<uint, int> diceRollByPlayer = new Dictionary<uint, int>();
+                // foreach (KeyValuePair<uint, int> current in diceRollByPlayer)
+                // {
+                //     if (current.Key != playerID)
+                //     {
+                //         while (current.Value == diceRoll)
+                //         {
+                //             diceRoll = Random.Range(1, 7);
+                //         }
+                //     }
+                // }
+
+                // diceRollByPlayer.Add(playerID, diceRoll);
+                // diceRollByPlayer = diceRollByPlayer.OrderByDescending(key => key.Value).ToDictionary(key => key.Key, key => key.Value);
+                // playerTurn = diceRollByPlayer.First().Key;
+
+                EffectFactory.Instance.InitializeFactory();
                 LoadCards();
             }
         }
@@ -66,7 +77,6 @@ public class TCGServer:MonoBehaviour
         foreach (uint currentPlayer in connectedPlayers)
         {
             NetworkIdentity player = NetworkServer.spawned[currentPlayer];
-            TCGPlayerManager playerManager = player.GetComponent<TCGPlayerManager>();
 
             for (int i = 0; i < TCGConstants.MAX_CARDS_PER_DECK; i++)
             {
@@ -78,8 +88,15 @@ public class TCGServer:MonoBehaviour
 
                 cardBehaviour.cardID = Random.Range(0,100);
                 // cardBehaviour.cardID = i;
+                cardBehaviour.effects = "heal01";
                 cardBehaviour.ownerID = currentPlayer;
 
+                //TODO: remove this after card data is inserted correctly
+                cardBehaviour.is_creature = true;
+                cardBehaviour.attack = Random.Range(1,6);
+                cardBehaviour.hit_points = Random.Range(1,6);
+                cardBehaviour.originalHitpoints = cardBehaviour.hit_points;
+                cardBehaviour.originalAttack = cardBehaviour.attack;
                 
                 await new WaitForSeconds(TCGGameManager.Instance.cardSpawnDelay);
             }
@@ -131,6 +148,26 @@ public class TCGServer:MonoBehaviour
             // }
         // }
 
+
+        if(attacker_card.double_hit && !cardsAttackedThisTurn.Contains(attackerID))
+        {
+            attacker_card.isAttackEnabled = true;
+        }
+        else if(cardsAttackedThisTurn.Contains(attackerID) && attacker_card.double_hit)
+        {
+            attacker_card.isAttackEnabled = false;
+        }
+
+        if(!attacker_card.double_hit)
+        {
+            attacker_card.isAttackEnabled = false;
+        }
+
+        if(!cardsAttackedThisTurn.Contains(attackerID))
+        {
+            cardsAttackedThisTurn.Add(attackerID);
+        }
+
         if(!attacker_card.isDead && !target_card.isDead)
         {
             ActionChain.Instance.AddToChain(
@@ -142,24 +179,24 @@ public class TCGServer:MonoBehaviour
                     
                     bool shouldTrample = false;
 
-                    if(attacker.double_hit && !cardsAttackedThisTurn.Contains(attackerID))
-                    {
-                        attacker.isAttackEnabled = true;
-                    }
-                    else if(cardsAttackedThisTurn.Contains(attackerID) && attacker.double_hit)
-                    {
-                        attacker.isAttackEnabled = false;
-                    }
+                    // if(attacker.double_hit && !cardsAttackedThisTurn.Contains(attackerID))
+                    // {
+                    //     attacker.isAttackEnabled = true;
+                    // }
+                    // else if(cardsAttackedThisTurn.Contains(attackerID) && attacker.double_hit)
+                    // {
+                    //     attacker.isAttackEnabled = false;
+                    // }
 
-                    if(!attacker.double_hit)
-                    {
-                        attacker.isAttackEnabled = false;
-                    }
+                    // if(!attacker.double_hit)
+                    // {
+                    //     attacker.isAttackEnabled = false;
+                    // }
 
-                    if(!cardsAttackedThisTurn.Contains(attackerID))
-                    {
-                        cardsAttackedThisTurn.Add(attackerID);
-                    }
+                    // if(!cardsAttackedThisTurn.Contains(attackerID))
+                    // {
+                    //     cardsAttackedThisTurn.Add(attackerID);
+                    // }
 
                     uint oponentID = GetOponentID(playerID);
 
@@ -182,16 +219,6 @@ public class TCGServer:MonoBehaviour
                             {
                                 UniversalDeathResolver(attacker);
                             }
-                        }
-
-                        if(target.isDead)
-                        {
-                            UniversalDeathResolver(target);
-                        }
-                        
-                        if(attacker.isDead)
-                        {
-                            UniversalDeathResolver(attacker);
                         }
 
                         if (!attacker.isDead)
@@ -372,8 +399,10 @@ public class TCGServer:MonoBehaviour
             string jsonDraw = JsonConvert.SerializeObject(draw_cards);
             string jsonDiscard = JsonConvert.SerializeObject(discard_cards);
 
-            // RPCSendCardToGraveyard(jsonDiscard);
-            // RPCDrawCard(jsonDraw, isTurnStart);
+            //TODO: DISCARD EXTRA
+            // TCGGameManager.Instance.RPCSendCardToGraveyard(jsonDiscard);
+            
+            TCGGameManager.Instance.RPCDrawCard(jsonDraw, isTurnStart);
         }
         else
         {
@@ -398,11 +427,10 @@ public class TCGServer:MonoBehaviour
                     card.isOnField = true;
                     card.isDead = false;
                     card.isAttackEnabled = false;
-                    // card.isAttackEnabled = card.haste;
+                    card.isAttackEnabled = card.haste;
 
                     DelayedCardSummon(playerID, actionID, cardNetID);
                 }else{
-                    //TODO: ONLY IF IS CREATURE
                     handsByPlayer[playerID].Remove(card);
                     graveyardByPlayer[playerID].Add(card);
 
@@ -410,6 +438,7 @@ public class TCGServer:MonoBehaviour
                 }
             }
         );
+
         if(!ActionChain.Instance.isChainBusy)
         {
             ActionChain.Instance.ResolveChain();
@@ -459,6 +488,7 @@ public class TCGServer:MonoBehaviour
     //SERVER ONLY
     public void UniversalDeathResolver(CardBehaviour target)
     {
+        Debug.Log("UniversalDeathResolver");
         uint ownerID = target.ownerID;
         uint oponentID = GetOponentID(ownerID);
 
@@ -471,6 +501,14 @@ public class TCGServer:MonoBehaviour
         {
             graveyardByPlayer[ownerID].Add(target);
         }
+    }
+
+    public void CreateBot()
+    {
+        GameObject bot = Instantiate(TCGGameManager.Instance.botPrefab);
+        TCGBot tcgBot = bot.GetComponent<TCGBot>();
+
+        NetworkServer.Spawn(bot);
     }
 
     public void CheckIsGameOver(uint playerID)

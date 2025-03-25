@@ -1,5 +1,7 @@
 using MasterServerToolkit.Utils;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using Newtonsoft;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -25,14 +27,14 @@ namespace MasterServerToolkit.Examples.BasicTelegramBotLogger
                     return;
                 }
 
-                if (response.ContainsKey("ok") && response.Value<bool>("ok") == true)
-                {
-                    Application.logMessageReceived += Application_logMessageReceived;
-                }
-                else
-                {
-                    logger.Error(response.Value<string>("description"));
-                }
+                // if (response.ContainsKey("ok") && response.Value<bool>("ok") == true)
+                // {
+                //     Application.logMessageReceived += Application_logMessageReceived;
+                // }
+                // else
+                // {
+                //     logger.Error(response.Value<string>("description"));
+                // }
             });
         }
 

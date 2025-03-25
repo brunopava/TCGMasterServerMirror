@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using Mirror;
+using TMPro;
 
 public delegate void AnimationComplete();
 
@@ -17,7 +18,21 @@ public class TCGAnimations
 
 	public static Sequence AttackCard(Transform playerCard, Transform target, AnimationComplete onDamage = null, AnimationComplete animationComplete = null)
 	{
+		Vector3 originalPosition = playerCard.position;
+
 		Sequence sequence = DOTween.Sequence();
+
+		sequence.Append(playerCard.DOMove(target.position, 0.5f).OnComplete(
+			()=>{
+				onDamage();
+			}
+		));
+		sequence.Append(playerCard.DOMove(originalPosition, 0.5f).OnComplete(
+			()=>{
+				animationComplete();
+			}
+		));
+
 		//TODO:
 		return sequence;
 	}
@@ -78,6 +93,24 @@ public class TCGAnimations
 		Sequence sequence = DOTween.Sequence();
 		//TODO:
 		// Transform ownerGraveyard,
+		return sequence;
+	}
+
+	public static Sequence FloatingText(GameObject prefab, Transform targetPosition, string value)
+	{
+		//TODO: FIX THIS
+		GameObject go = GameObject.Instantiate(prefab, targetPosition.position, Quaternion.identity) as GameObject;
+		go.GetComponent<TMP_Text>().text = value;
+
+		Sequence sequence = DOTween.Sequence();
+
+		Vector3 offset = new Vector3(0,0,-3f);
+		sequence.Append(go.transform.DOMove(go.transform.position - offset, 0.5f).OnComplete(
+			()=>{
+				// GameObject.Destroy(go);
+			}
+		));
+
 		return sequence;
 	}
 }

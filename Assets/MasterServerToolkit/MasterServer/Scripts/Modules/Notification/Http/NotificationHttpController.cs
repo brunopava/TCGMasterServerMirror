@@ -1,4 +1,5 @@
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 using System;
 using System.IO;
 using System.Net;
@@ -37,7 +38,7 @@ namespace MasterServerToolkit.MasterServer
                     jsonRequest = JObject.Parse(stream.ReadToEnd());
                 }
 
-                if (!jsonRequest.ContainsKey("message")) throw new Exception("[message] parameter is not defined");
+                // if (!jsonRequest.ContainsKey("message")) throw new Exception("[message] parameter is not defined");
                 if (!notificationModule) throw new Exception("[NotificationModule] not found");
 
                 // Read message

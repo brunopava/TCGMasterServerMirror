@@ -136,6 +136,7 @@ public class ActionChain : NetworkBehaviour
                 KeyValuePair<int, PlayerAction> current = chain.First();
 
                 //ACTIVATE ACTION - > PASS ID
+                // Debug.Log(current.Key);
                 current.Value(current.Key);
 
                 inactivityTimer.ResetTimer();

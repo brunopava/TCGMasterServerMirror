@@ -22,20 +22,23 @@ public class TCGClient:MonoBehaviour
         {
             cardsSprites.Add(i, sprites[i]);
         }
-        // foreach(Sprite current in sprites)
+        // foreach(KeyValuePair<int, Texture> current in cardsSprites)
         // {
-        //     string identifier = current.name.Split('_')[0];
-        //     int id = 0;
-        //     if(int.TryParse(identifier, out id))
-        //     {
+        //     Debug.Log(current.Value.name);
+        //     // string identifier = current.name.Split('_')[0];
+        //     // int id = 0;
+        //     // if(int.TryParse(identifier, out id))
+        //     // {
                 
-        //     }
+        //     // }
         // }
     }
 
-	public void OnDeckSpawnComplete(string json)
+	public async void OnDeckSpawnComplete(string json)
 	{
         LoadCards();
+
+        await new WaitForSeconds(0.5f);
 
 		Dictionary<uint, List<uint>> decks = JsonConvert.DeserializeObject<Dictionary<uint, List<uint>>>(json);
 
@@ -50,9 +53,9 @@ public class TCGClient:MonoBehaviour
                 {
                     NetworkIdentity cardIdentity = NetworkClient.spawned[current];
                     CardBehaviour card = cardIdentity.GetComponent<CardBehaviour>();
-                    // card.Load();
-                    card.display.SetCardImage(cardsSprites[card.cardID]);
+                    card.UpdateData();
 
+                    // Debug.Log(card.cardID);
                     if (card != null)
                     {
                         if (card.hasAuthority)
@@ -66,11 +69,27 @@ public class TCGClient:MonoBehaviour
                             oponentCards.Add(card);
                         }
                     }
+
+                    // because cards are outside folders in resources
+                    if(cardsSprites.ContainsKey(card.cardID))
+                    {
+                        card.display.SetCardImage(cardsSprites[card.cardID]); 
+                    }
                 }
             }
         }
 
+        await new WaitForSeconds(0.5f);
+
         UIManager.Instance.OnGameStarted();
+
+        await new WaitForSeconds(0.5f);
+        TCGGameManager.Instance.CMDDrawInitialCards(NetworkClient.localPlayer.netId);
+        if(TCGGameManager.Instance.isBotGame)
+        {
+            uint botID = TCGGameManager.Instance.gameServer.GetOponentID(NetworkClient.localPlayer.netId);
+            TCGGameManager.Instance.CMDDrawInitialCards(botID);
+        }
 	}
 
 	public void DrawInitialCards(string json)
@@ -131,6 +150,7 @@ public class TCGClient:MonoBehaviour
             {
                 card.transform.SetParent(TCGArena.Instance.playerHand);
                 card.isInteractable = true;
+                card.display.ToggleSleeve();
             }
             else
             {
@@ -144,11 +164,8 @@ public class TCGClient:MonoBehaviour
         NetworkIdentity netiden = NetworkClient.spawned[cardNetID];
         CardBehaviour card = netiden.GetComponent<CardBehaviour>();
 
-        // card.SetCardInfo();
         card.display.ToggleSleeve();
         card.isInteractable = false;
-        card.isAttackEnabled = false;
-        // card.isAttackEnabled = card.haste;
 
         card.transform.SetParent(null);
         card.transform.rotation = Quaternion.Euler(Vector3.zero);
@@ -156,7 +173,8 @@ public class TCGClient:MonoBehaviour
         if (!card.hasAuthority)
         {
             
-            card.transform.SetParent(TCGArena.Instance.oponentField);
+            //TODO:
+            // card.transform.SetParent(TCGArena.Instance.oponentField);
 
             
             Sequence cast = TCGAnimations.PutOnEvidenceForSeconds(
@@ -171,7 +189,8 @@ public class TCGClient:MonoBehaviour
             );
             cast.Play();
         }else{
-            card.transform.SetParent(TCGArena.Instance.playerField);
+            //TODO:
+            // card.transform.SetParent(TCGArena.Instance.playerField);
         }  
 
         ActionChain.Instance.CMDCompleteAction(NetworkClient.localPlayer.netId, actionID);
@@ -183,65 +202,37 @@ public class TCGClient:MonoBehaviour
         CardBehaviour card = netiden.GetComponent<CardBehaviour>();
         
         card.transform.rotation = Quaternion.Euler(Vector3.zero);
-        
+        card.UpdateData();
+        card.display.ToggleSleeve();
+
         if (card.hasAuthority)
         {
             card.transform.SetParent(TCGArena.Instance.playerField);
-            // card.SetCardInfo();
             card.isInteractable = true;
             // AudioManager.Instance.PlayDropCardSound();
 
-            // List<CardBehaviour> arena = UIGameArena.Instance.GetPlayerField();
-            // foreach(CardBehaviour currentCard in arena)
-            // {
-            //     if(card != currentCard)
-            //     {
-            //         foreach(int effect_id in currentCard.card_effects)
-            //         {
-            //             if (EffectFactory.Instance.allEffects.ContainsKey(effect_id))
-            //             {
-            //                 CardEffectBase effect = EffectFactory.Instance.allEffects[effect_id];
-                            
-            //                 if(effect.on_summon && !effect.observe_oponent)
-            //                 {
-            //                     effect.OnSummon(
-            //                         currentCard,
-            //                         () => {
-            //                             Debug.Log("Casted OnSummon: " + effect.effect_name);
-            //                         }
-            //                     );
-            //                 }
-            //             }
-            //         }
-            //     }
-            // }
-
-            // List<CardBehaviour> oponentArena = UIGameArena.Instance.GetOponentField();
-            // foreach(CardBehaviour currentCard in oponentArena)
-            // {
-            //     foreach(int effect_id in currentCard.card_effects)
-            //     {
-            //         if (EffectFactory.Instance.allEffects.ContainsKey(effect_id))
-            //         {
-            //             CardEffectBase effect = EffectFactory.Instance.allEffects[effect_id];
-
-            //             if(effect.on_summon && effect.observe_oponent)
-            //             {
-            //                 effect.OnSummon(
-            //                     currentCard,
-            //                     () => {
-            //                         Debug.Log("Casted OnSummon: " + effect.effect_name);
-            //                     }
-            //                 );
-            //             }
-            //         }
-            //     }
-            // }
+            foreach(string effect_id in card.card_effects)
+            {
+                if (EffectFactory.Instance.effectPool.ContainsKey(effect_id))
+                {
+                    EffectBase effect = EffectFactory.Instance.effectPool[effect_id];
+                    
+                    if(effect.data.on_summon && !effect.data.observe_oponent)
+                    {
+                        Debug.Log("Casted OnSummon: " + effect.data.effect_name);
+                        effect.OnSummon(
+                            card,
+                            () => {
+                                Debug.Log("Casted OnSummon: " + effect.data.effect_name);
+                            }
+                        );
+                    }
+                }
+            }
         }
         else
         {
-            card.transform.SetParent(TCGArena.Instance.oponentField);
-            // card.SetCardInfo();            
+            card.transform.SetParent(TCGArena.Instance.oponentField);          
         }
 
         // if (NetworkClient.localPlayer.netId == playerID)
@@ -321,7 +312,6 @@ public class TCGClient:MonoBehaviour
         //     }
         // }
 
-        // influenceManager.CMDEnableInfluence(NetworkClient.localPlayer.netId); 
         ActionChain.Instance.CMDCompleteAction(NetworkClient.localPlayer.netId, actionID);
     }
 
@@ -421,23 +411,23 @@ public class TCGClient:MonoBehaviour
             target.display.transform,
             () =>
             {
-                
+                // if(damage > 0)
+                // {
+                //     TCGAnimations.FloatingText(
+                //          target.display.hit_points.gameObject,
+                //          target.display.hit_points.transform,
+                //          damage.ToString());
+                // }
+                // if(damageTaken > 0)
+                // {
+                //     TCGAnimations.FloatingText(
+                //          attacker.display.hit_points.gameObject,
+                //          attacker.display.hit_points.transform,
+                //          damageTaken.ToString());
+                // }
             },
             () =>
             {
-                // if(damage!=0)
-                // {
-                //     FloatingText.Instance.AnimateFloatingText(
-                //          target.cardVisual.hitPointText.GetComponent<RectTransform>().position,
-                //          damage);
-                // }
-                // if(damageTaken!=0)
-                // {
-                //     FloatingText.Instance.AnimateFloatingText(
-                //          attacker.cardVisual.hitPointText.GetComponent<RectTransform>().position,
-                //          damageTaken);
-                // }
-
                 DelayedAttackResolver(attacker, target, actionID);
             }
         );
@@ -454,21 +444,47 @@ public class TCGClient:MonoBehaviour
     //CLIENT
     private async void DelayedAttackResolver(CardBehaviour attacker, CardBehaviour target, int actionID)
     {
+        await new WaitForSeconds(0.1f);
+
         uint playerID = NetworkClient.localPlayer.netId;
 
         attacker.UpdateData();
         target.UpdateData();
+
         attacker.display.SetIsPlayable(false);
         target.display.SetIsPlayable(false);
 
-        await new WaitForSeconds(0.1f);
+        await new WaitForSeconds(0.5f);
 
         List<uint> cards = new List<uint>();
         cards.Add(attacker.netId);
         cards.Add(target.netId);
         string json = JsonConvert.SerializeObject(cards);
 
+        if (attacker.hasAuthority && attacker.isDead)
+        {
+            attacker.transform.SetParent(TCGArena.Instance.playerGraveyard);
+        }
+        else if(attacker.isDead)
+        {
+            attacker.transform.SetParent(TCGArena.Instance.oponentGraveyard);
+        }
+
+        if (target.hasAuthority && target.isDead)
+        {
+            target.transform.SetParent(TCGArena.Instance.playerGraveyard);
+        }
+        else if(target.isDead)
+        {
+            target.transform.SetParent(TCGArena.Instance.oponentGraveyard);
+        }
+
+        await new WaitForSeconds(0.1f);
+        
+        // TODO:
         // effectResolver.DelayedEffectResolver(playerID, json, actionID);
+
+        ActionChain.Instance.CMDCompleteAction(playerID, actionID);
     }
 
 	//CLIENT ONLY

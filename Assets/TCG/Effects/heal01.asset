@@ -1,0 +1,72 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 240399d21b53b7248b6ba54347627555, type: 3}
+  m_Name: heal01
+  m_EditorClassIdentifier: 
+  effect_name: heal01
+  description_label: healLabel
+  damage: 0
+  heal: 1
+  target_number: 1
+  plus_marker: 0
+  minus_marker: 0
+  draw_cards: 0
+  self_discard_cards: 0
+  oponent_discard_cards: 0
+  discard_self_deck: 0
+  discard_oponent_deck: 0
+  create_tokens: 0
+  token_skin: 0
+  turn_counter: 0
+  card_id: 
+  on_cast: 0
+  on_death: 0
+  on_start_turn: 0
+  on_start_turn_graveyard: 0
+  on_end_turn: 0
+  on_end_turn_graveyard: 0
+  on_hand_effect: 0
+  on_creature_death: 0
+  on_summon: 1
+  on_draw: 0
+  on_discard: 0
+  observe_oponent: 0
+  use_ally_count: 0
+  use_enemy_count: 0
+  use_player_hand_count: 0
+  use_enemy_hand_count: 0
+  is_aura_all: 0
+  is_aura_friendly: 0
+  is_aura_enemy: 0
+  aura_priority: 0
+  only_wounded: 0
+  creature_only: 0
+  destroy_target: 0
+  return_target_to_hand: 0
+  search_in_deck: 0
+  search_in_graveyard: 0
+  use_category: 0
+  use_sinergy: 0
+  fury: 0
+  tank: 0
+  barrier: 0
+  haste: 0
+  death_touch: 0
+  double_hit: 0
+  direct_hit: 0
+  trample: 0
+  silence: 0
+  imprison: 0
+  freeze_on_hit: 0
+  charm: 0
+  projectilePrefab: {fileID: 0}
+  feedbackPrefab: {fileID: 0}
